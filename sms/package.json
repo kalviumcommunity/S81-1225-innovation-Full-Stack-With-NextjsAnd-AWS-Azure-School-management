@@ -1,0 +1,27 @@
+{
+  "name": "sms",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "build:development": "cross-env NODE_ENV=development next build",
+    "build:staging": "cross-env NODE_ENV=staging next build",
+    "build:production": "cross-env NODE_ENV=production next build",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "cross-env": "^7.0.3",
+    "next": "16.0.10",
+    "react": "19.2.1",
+    "react-dom": "19.2.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "babel-plugin-react-compiler": "1.0.0",
+    "eslint": "^9",
+    "eslint-config-next": "16.0.10",
+    "tailwindcss": "^4"
+  }
+}
