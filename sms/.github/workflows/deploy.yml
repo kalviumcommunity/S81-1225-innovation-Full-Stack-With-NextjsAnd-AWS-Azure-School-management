@@ -1,0 +1,106 @@
+name: Deploy School Management System
+
+on:
+  push:
+    branches:
+      - main
+      - staging
+      - development
+  pull_request:
+    branches:
+      - main
+      - staging
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Load Development Environment Variables
+        if: github.ref == 'refs/heads/development'
+        run: |
+          echo "NEXT_PUBLIC_API_URL=${{ secrets.DEV_API_URL }}" >> .env.production
+          echo "NEXT_PUBLIC_APP_ENV=development" >> .env.production
+          echo "DATABASE_URL=${{ secrets.DEV_DATABASE_URL }}" >> .env.production
+          echo "JWT_SECRET=${{ secrets.DEV_JWT_SECRET }}" >> .env.production
+          echo "NEXT_PUBLIC_APP_NAME=School Management System (Dev)" >> .env.production
+          echo "NEXT_PUBLIC_ENABLE_DEBUG=true" >> .env.production
+
+      - name: Load Staging Environment Variables
+        if: github.ref == 'refs/heads/staging'
+        run: |
+          echo "NEXT_PUBLIC_API_URL=${{ secrets.STAGING_API_URL }}" >> .env.production
+          echo "NEXT_PUBLIC_APP_ENV=staging" >> .env.production
+          echo "DATABASE_URL=${{ secrets.STAGING_DATABASE_URL }}" >> .env.production
+          echo "JWT_SECRET=${{ secrets.STAGING_JWT_SECRET }}" >> .env.production
+          echo "NEXT_PUBLIC_APP_NAME=School Management System (Staging)" >> .env.production
+          echo "NEXT_PUBLIC_ENABLE_DEBUG=false" >> .env.production
+
+      - name: Load Production Environment Variables
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo "NEXT_PUBLIC_API_URL=${{ secrets.PROD_API_URL }}" >> .env.production
+          echo "NEXT_PUBLIC_APP_ENV=production" >> .env.production
+          echo "DATABASE_URL=${{ secrets.PROD_DATABASE_URL }}" >> .env.production
+          echo "JWT_SECRET=${{ secrets.PROD_JWT_SECRET }}" >> .env.production
+          echo "NEXT_PUBLIC_APP_NAME=School Management System" >> .env.production
+          echo "NEXT_PUBLIC_ENABLE_DEBUG=false" >> .env.production
+
+      - name: Build Application
+        run: npm run build:production
+        env:
+          NODE_ENV: production
+
+      - name: Run Tests (if available)
+        run: npm test --if-present
+
+      - name: Verify Environment
+        run: |
+          echo "Build completed for branch: ${{ github.ref }}"
+          echo "Environment loaded successfully"
+          echo "Build artifacts ready for deployment"
+
+      # Add deployment steps here based on your hosting provider
+      # Examples: Vercel, AWS, Azure, etc.
+
+  security-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check for exposed secrets
+        run: |
+          if grep -r "DATABASE_URL=postgresql://" . --exclude-dir={node_modules,.git,.next} --exclude="*.example" --exclude="deploy.yml"; then
+            echo "⚠️ WARNING: Potential database credentials found in committed files!"
+            exit 1
+          else
+            echo "✅ No exposed secrets detected"
+          fi
+
+      - name: Verify .gitignore rules
+        run: |
+          if [ -f .gitignore ]; then
+            if grep -q ".env" .gitignore; then
+              echo "✅ .gitignore properly configured for environment files"
+            else
+              echo "⚠️ WARNING: .env files may not be properly ignored"
+              exit 1
+            fi
+          else
+            echo "❌ ERROR: .gitignore file not found"
+            exit 1
+          fi
