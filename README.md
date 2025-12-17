@@ -1,8 +1,11 @@
-Student Management System
+# Student Management System
+
 
 # Advanced Data Fetching in Next.js (App Router)
 
+
 ## Concept-1: Static, Dynamic, and Hybrid Rendering
+
 
 This project demonstrates how Next.js App Router supports multiple rendering strategies — Static Site Generation (SSG), Server-Side Rendering (SSR), and Incremental Static Regeneration (ISR). The goal is to understand how choosing the right rendering method impacts performance, scalability, and data freshness in real-world applications.
 
@@ -77,3 +80,10 @@ Announcements need to stay updated but do not require real-time rendering.
 Each rendering mode optimizes two out of three factors: speed, scalability, and data freshness.
 
 ---
+
+
+
+
+
+
+
