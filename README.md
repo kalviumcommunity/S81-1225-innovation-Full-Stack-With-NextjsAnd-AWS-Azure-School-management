@@ -294,3 +294,22 @@ Add screenshots after you create a real PR:
 - Branch naming keeps work traceable and reduces confusion.
 - PR templates and checklists make reviews faster and more consistent.
 - Branch protection ensures code is reviewed and validated before it reaches `main`, improving quality and team velocity.
+### Concept-2.10: Environment Variable Management
+
+This project follows best practices for managing environment variables and secrets in a Next.js (App Router) application to ensure security, maintainability, and production readiness.
+
+Environment Files Used
+
+Two environment configuration files are used in this project to clearly separate real secrets from documented placeholders.
+
+.env.local
+
+This file stores real credentials and sensitive configuration values required for the application to function correctly.
+
+Used only in local development
+
+Never committed to GitHub
+
+Contains actual secrets
+
+Examples of values stored here include database URLs, authentication secrets, and private API keys.
