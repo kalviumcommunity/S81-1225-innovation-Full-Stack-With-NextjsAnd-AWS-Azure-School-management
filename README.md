@@ -89,6 +89,112 @@ This section explains how a full-stack application like the **Student Management
 
 ---
 
+## 2.12 Docker & Compose Setup for Local Development
+
+This repo includes a Dockerized local stack that runs:
+
+- Next.js app
+- PostgreSQL database
+- Redis cache
+
+### Files added
+
+- App image build: [sms/Dockerfile](sms/Dockerfile)
+- Multi-service local stack: [docker-compose.yml](docker-compose.yml)
+
+### What the Dockerfile does (Next.js)
+
+The [sms/Dockerfile](sms/Dockerfile) builds a production-ready Next.js container:
+
+- Uses `node:20-alpine`
+- Installs dependencies with `npm ci` (from `package-lock.json`)
+- Runs `npm run build`
+- Exposes port `3000`
+- Starts with `npm run start`
+
+### What the Compose stack does
+
+The [docker-compose.yml](docker-compose.yml) defines 3 services connected by a shared bridge network (`localnet`):
+
+- `app` (Next.js)
+  - Builds from `./sms`
+  - Publishes `3000:3000`
+  - Injects:
+    - `DATABASE_URL=postgres://postgres:password@db:5432/mydb`
+    - `REDIS_URL=redis://redis:6379`
+- `db` (PostgreSQL 15)
+  - Publishes `5432:5432`
+  - Persists data using the named volume `db_data` mounted at `/var/lib/postgresql/data`
+- `redis` (Redis 7)
+  - Publishes `6379:6379`
+
+### Networks, volumes, and environment variables
+
+- **Network**: `localnet` lets containers reach each other by service name (`db`, `redis`).
+- **Volume**: `db_data` persists Postgres data across restarts.
+- **Env vars**:
+  - `DATABASE_URL` points the app to Postgres _inside_ the Docker network (`db:5432`).
+  - `REDIS_URL` points the app to Redis _inside_ the Docker network (`redis:6379`).
+
+Note: `depends_on` ensures startup order, but it does not guarantee that Postgres/Redis are fully ready before the app starts.
+
+### Run the full stack locally
+
+From the repo root (same folder as [docker-compose.yml](docker-compose.yml)):
+
+```bash
+docker compose up --build
+```
+
+If your machine uses the legacy binary:
+
+```bash
+docker-compose up --build
+```
+
+Stop containers:
+
+```bash
+docker compose down
+```
+
+Stop and delete the Postgres volume (full reset):
+
+```bash
+docker compose down -v
+```
+
+### Verify everything is running
+
+- App: http://localhost:3000
+- Postgres: `localhost:5432`
+- Redis: `localhost:6379`
+
+Useful commands:
+
+```bash
+docker ps
+docker compose logs -f app
+docker compose logs -f db
+docker compose logs -f redis
+```
+
+### Common issues + fixes (reflection)
+
+- **Port conflict** (`Bind for 0.0.0.0:5432 failed`): stop the service using the port, or change the host mapping in [docker-compose.yml](docker-compose.yml).
+- **Docker engine not running (Windows)** (`open //./pipe/dockerDesktopLinuxEngine: The system cannot find the file specified`): start Docker Desktop and ensure it’s using **Linux containers** (WSL2-backed).
+- **Slow builds**: first build downloads deps; later builds are faster due to Docker layer caching.
+- **App starts before DB is ready**: retry the request, or add DB readiness logic in the app (Compose ordering is not a health guarantee).
+
+### Evidence (screenshots / logs)
+
+Paste your proof here after running locally:
+
+- Screenshot or log showing `docker compose up --build` completed
+- Output of `docker ps` showing `nextjs_app`, `postgres_db`, and `redis_cache` running
+
+---
+
 ### 1. Containerization Using Docker
 
 Docker is used to package the application along with all its dependencies into a **container**, ensuring that the app runs the same way in development, testing, and production environments.
@@ -294,6 +400,7 @@ Add screenshots after you create a real PR:
 - Branch naming keeps work traceable and reduces confusion.
 - PR templates and checklists make reviews faster and more consistent.
 - Branch protection ensures code is reviewed and validated before it reaches `main`, improving quality and team velocity.
+
 ### Concept-2.10: Environment Variable Management
 
 This project follows best practices for managing environment variables and secrets in a Next.js (App Router) application to ensure security, maintainability, and production readiness.
