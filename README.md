@@ -195,6 +195,97 @@ Paste your proof here after running locally:
 
 ---
 
+## 2.13 PostgreSQL Schema Design
+
+This project uses a normalized PostgreSQL schema (managed via Prisma ORM) to model the core school-management entities and their relationships.
+
+### Core entities
+
+- `User` (authentication + role)
+- `Student` (student profile, 1:1 with `User`)
+- `Teacher` (teacher profile, 1:1 with `User`)
+- `Class` (a class taught by a teacher)
+- `Enrollment` (many-to-many bridge between `Student` and `Class`)
+- `Attendance` (per-student, per-class, per-day record)
+- `Announcement` (created by a teacher, optionally targeted to a class)
+
+### ER diagram (high level)
+
+```mermaid
+erDiagram
+  User ||--o| Student : has
+  User ||--o| Teacher : has
+  Teacher ||--o{ Class : teaches
+  Student ||--o{ Enrollment : enrolls
+  Class ||--o{ Enrollment : contains
+  Student ||--o{ Attendance : marked
+  Class ||--o{ Attendance : has
+  Teacher ||--o{ Announcement : creates
+  Class ||--o{ Announcement : targets
+```
+
+### Prisma schema
+
+- Schema file: [sms/prisma/schema.prisma](sms/prisma/schema.prisma)
+- Initial migration SQL: [sms/prisma/migrations/20251224153000_init_schema/migration.sql](sms/prisma/migrations/20251224153000_init_schema/migration.sql)
+- Seed script: [sms/prisma/seed.js](sms/prisma/seed.js)
+
+### Keys, relationships, constraints, and indexes (examples)
+
+- **Primary keys (PKs)**: all tables use UUID-backed string IDs.
+- **Foreign keys (FKs)**:
+  - `Student.userId → User.id` (1:1)
+  - `Teacher.userId → User.id` (1:1)
+  - `Class.teacherId → Teacher.id` (1:N)
+  - `Enrollment.studentId → Student.id` and `Enrollment.classId → Class.id` (M:N)
+- **Uniqueness constraints**:
+  - `User.email` unique
+  - `Student.admissionNo` unique
+  - `Teacher.employeeNo` unique
+  - `Enrollment(studentId, classId)` unique (prevents duplicate enrollment)
+  - `Attendance(studentId, classId, date)` unique (one attendance entry per day)
+- **Referential actions**:
+  - Cascade deletes for dependent records (e.g., deleting a `Student` removes enrollments/attendance)
+  - `Announcement.classId` uses `SET NULL` so old announcements can remain even if a class is deleted
+- **Indexes**:
+  - Common query paths are indexed (e.g., `Class.teacherId`, `Attendance(classId, date)`, `Enrollment(classId)`)
+
+### Normalization notes (1NF / 2NF / 3NF)
+
+- **1NF**: all fields are atomic (no repeating groups stored in a single column).
+- **2NF**: many-to-many data is moved into the bridge table `Enrollment` instead of duplicating class lists inside `Student`.
+- **3NF**: role-specific attributes are separated into `Student` / `Teacher` instead of bloating `User` with optional columns.
+
+### Migrations, seeding, and verification
+
+1. Ensure Postgres is running (Docker recommended).
+
+```bash
+docker compose up -d db redis
+```
+
+2. Run migrations and seed data (from the `sms` folder).
+
+```bash
+cd sms
+
+# PowerShell example:
+$env:DATABASE_URL="postgresql://postgres:password@localhost:5432/mydb?schema=public"
+npx prisma migrate dev --name init_schema
+npx prisma db seed
+npx prisma studio
+```
+
+### Evidence (screenshots / logs)
+
+Paste your proof here after running locally:
+
+- Terminal output for `npx prisma migrate dev --name init_schema`
+- Terminal output for `npx prisma db seed`
+- Screenshot of Prisma Studio showing related records (User ↔ Student/Teacher, Enrollment, Attendance)
+
+---
+
 ### 1. Containerization Using Docker
 
 Docker is used to package the application along with all its dependencies into a **container**, ensuring that the app runs the same way in development, testing, and production environments.
