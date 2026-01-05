@@ -1,5 +1,9 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
 generator client {
   provider = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl"]
 }
 
 datasource db {
@@ -7,128 +11,144 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// User roles enum
 enum UserRole {
   ADMIN
   TEACHER
   STUDENT
+  PARENT
 }
 
-enum AttendanceStatus {
-  PRESENT
-  ABSENT
-  LATE
-  EXCUSED
+// Task status enum
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
 }
 
+// Project status enum
+enum ProjectStatus {
+  ACTIVE
+  ARCHIVED
+  COMPLETED
+}
+
+// User model
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  fullName  String
-  role      UserRole
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id        String     @id @default(cuid())
+  email     String     @unique
+  password  String
+  firstName String
+  lastName  String
+  role      UserRole   @default(STUDENT)
+  avatar    String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  isActive  Boolean    @default(true)
 
-  student Student?
-  teacher Teacher?
+  // Relations
+  projects      Project[]      @relation("UserProjects")
+  assignedTasks Task[]         @relation("AssignedUser")
+  createdTasks  Task[]         @relation("CreatedByUser")
+  submissions   Submission[]   @relation("StudentSubmissions")
+  comments      Comment[]
+  sessions      Session[]
 
+  @@index([email])
   @@index([role])
-  @@index([isActive])
 }
 
-model Student {
-  id           String   @id @default(uuid())
-  userId       String   @unique
-  admissionNo  String   @unique
-  dateOfBirth  DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+// Project model
+model Project {
+  id          String        @id @default(cuid())
+  title       String
+  description String?
+  status      ProjectStatus @default(ACTIVE)
+  startDate   DateTime
+  endDate     DateTime?
+  createdBy   String
+  creator     User          @relation("UserProjects", fields: [createdBy], references: [id], onDelete: Cascade)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
 
-  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  enrollments Enrollment[]
-  attendance  Attendance[]
+  // Relations
+  tasks Task[]
 
-  @@index([admissionNo])
+  @@index([createdBy])
+  @@index([status])
 }
 
-model Teacher {
-  id         String   @id @default(uuid())
-  userId     String   @unique
-  employeeNo String   @unique
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+// Task model
+model Task {
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  status      TaskStatus @default(TODO)
+  priority    Int        @default(1)
+  dueDate     DateTime?
+  projectId   String
+  project     Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assignedTo  String?
+  assignee    User?      @relation("AssignedUser", fields: [assignedTo], references: [id])
+  createdBy   String
+  creator     User       @relation("CreatedByUser", fields: [createdBy], references: [id], onDelete: Cascade)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  classesTaught Class[]
-  announcements Announcement[]
+  // Relations
+  submissions Submission[]
+  comments    Comment[]
 
-  @@index([employeeNo])
+  @@index([projectId])
+  @@index([assignedTo])
+  @@index([createdBy])
+  @@index([status])
 }
 
-model Class {
-  id        String   @id @default(uuid())
-  code      String   @unique
-  name      String
-  section   String?
-  year      Int
-  teacherId String
+// Submission model (for students submitting work)
+model Submission {
+  id        String   @id @default(cuid())
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  studentId String
+  student   User     @relation("StudentSubmissions", fields: [studentId], references: [id], onDelete: Cascade)
+  content   String
+  fileUrl   String?
+  grade     Int?
+  feedback  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  teacher      Teacher        @relation(fields: [teacherId], references: [id], onDelete: Restrict)
-  enrollments  Enrollment[]
-  announcements Announcement[]
-  attendance   Attendance[]
-
-  @@index([teacherId])
-  @@index([year])
-  @@unique([name, section, year])
-}
-
-model Enrollment {
-  id         String   @id @default(uuid())
-  studentId  String
-  classId    String
-  enrolledAt DateTime @default(now())
-  isActive   Boolean  @default(true)
-
-  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  class   Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
-
-  @@unique([studentId, classId])
-  @@index([classId])
+  @@index([taskId])
   @@index([studentId])
-  @@index([isActive])
+  @@unique([taskId, studentId])
 }
 
-model Attendance {
-  id        String           @id @default(uuid())
-  studentId String
-  classId   String
-  date      DateTime
-  status    AttendanceStatus
-  note      String?
-  markedAt  DateTime         @default(now())
+// Comment model
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  class   Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
-
-  @@unique([studentId, classId, date])
-  @@index([classId, date])
-  @@index([studentId, date])
+  @@index([taskId])
+  @@index([userId])
 }
 
-model Announcement {
-  id        String   @id @default(uuid())
-  title     String
-  body      String
-  teacherId String
-  classId   String?
+// Session model (for tracking user sessions)
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
   createdAt DateTime @default(now())
 
-  teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
-  class   Class?  @relation(fields: [classId], references: [id], onDelete: SetNull)
-
-  @@index([teacherId, createdAt])
-  @@index([classId, createdAt])
+  @@index([userId])
+  @@index([token])
 }
