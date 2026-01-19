@@ -54,9 +54,29 @@ model User {
   submissions   Submission[]   @relation("StudentSubmissions")
   comments      Comment[]
   sessions      Session[]
+  uploadedFiles UploadedFile[]
 
   @@index([email])
   @@index([role])
+}
+
+// Uploaded file metadata (pre-signed URL uploads)
+model UploadedFile {
+  id           String   @id @default(cuid())
+  provider     String
+  bucket       String
+  key          String
+  url          String
+  originalName String
+  mimeType     String
+  size         Int
+  uploaderId   String
+  uploader     User     @relation(fields: [uploaderId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+
+  @@index([uploaderId])
+  @@index([provider])
+  @@index([bucket])
 }
 
 // Project model
