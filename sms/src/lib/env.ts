@@ -4,6 +4,14 @@ const serverSchema = z.object({
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
   REDIS_URL: z.string().min(1, "REDIS_URL is required"),
   JWT_SECRET: z.string().min(1, "JWT_SECRET is required"),
+
+  // Optional: only required if using S3 pre-signed upload feature
+  AWS_ACCESS_KEY_ID: z.string().min(1).optional(),
+  AWS_SECRET_ACCESS_KEY: z.string().min(1).optional(),
+  AWS_REGION: z.string().min(1).optional(),
+  AWS_BUCKET_NAME: z.string().min(1).optional(),
+  S3_PRESIGN_TTL_SECONDS: z.coerce.number().int().positive().optional(),
+  UPLOAD_MAX_BYTES: z.coerce.number().int().positive().optional(),
 });
 
 const clientSchema = z.object({
@@ -24,6 +32,13 @@ export function getServerEnv(): ServerEnv {
     DATABASE_URL: process.env.DATABASE_URL,
     REDIS_URL: process.env.REDIS_URL,
     JWT_SECRET: process.env.JWT_SECRET,
+
+    AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
+    AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
+    AWS_REGION: process.env.AWS_REGION,
+    AWS_BUCKET_NAME: process.env.AWS_BUCKET_NAME,
+    S3_PRESIGN_TTL_SECONDS: process.env.S3_PRESIGN_TTL_SECONDS,
+    UPLOAD_MAX_BYTES: process.env.UPLOAD_MAX_BYTES,
   });
   return cachedServerEnv;
 }

@@ -195,6 +195,58 @@ Paste your proof here after running locally:
 
 ---
 
+## Secure File Uploads with Pre-Signed URLs (AWS S3)
+
+This project implements a secure, scalable upload flow using **pre-signed URLs** so files upload directly from the client to S3, while the backend only issues short-lived permissions.
+
+### Why pre-signed URLs?
+
+- **Security**: AWS credentials never reach the browser.
+- **Scalability**: the API only generates URLs (no large file streaming).
+- **Performance**: files bypass the application server.
+
+### Flow (high-level)
+
+```mermaid
+flowchart LR
+  C[Client] -->|1. POST /api/upload\n(filename, fileType, size)| A[Next.js API]
+  A -->|2. pre-signed PUT URL| C
+  C -->|3. PUT file bytes| S[(S3 Bucket)]
+  C -->|4. POST /api/files\n(metadata + URL)| A
+  A -->|5. INSERT UploadedFile| D[(Postgres)]
+```
+
+### Implemented endpoints
+
+- `POST /api/upload` (generates a pre-signed S3 PUT URL)
+- `POST /api/files` (stores file metadata in Postgres)
+
+Code locations:
+
+- Upload presign route: `sms/src/app/api/upload/route.ts`
+- DB record route: `sms/src/app/api/files/route.ts`
+- Prisma model: `sms/prisma/schema.prisma` (`UploadedFile`)
+
+### Validation + TTL
+
+- File type allowlist: images (`jpeg/png/webp`) and PDFs
+- Size limit: `UPLOAD_MAX_BYTES` (default 10MB)
+- URL expiry: `S3_PRESIGN_TTL_SECONDS` (default 60s)
+
+### Lifecycle policy (reflection)
+
+Add an S3 lifecycle rule on the `uploads/` prefix:
+
+- **Delete** objects after N days (e.g., 30) or
+- **Transition** to cheaper storage for archival
+
+This improves cost control and reduces the long-term security risk of stale content.
+
+### Evidence (paste proof here)
+
+- Screenshot of successful upload in the S3 console
+- Example request/response logs for `/api/upload` and `/api/files`
+
 ## 2.13 PostgreSQL Schema Design
 
 This project uses a normalized PostgreSQL schema (managed via Prisma ORM) to model the core school-management entities and their relationships.
