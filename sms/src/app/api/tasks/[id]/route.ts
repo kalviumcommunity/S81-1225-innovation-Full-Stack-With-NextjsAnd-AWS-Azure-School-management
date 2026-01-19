@@ -14,7 +14,7 @@ import {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const { user, error } = await authenticateRequest(request);
@@ -27,7 +27,7 @@ export async function GET(
       return errorResponse("Unauthorized", StatusCode.UNAUTHORIZED);
     }
 
-    const { id } = params;
+    const { id } = await context.params;
 
     const task = await prisma.task.findUnique({
       where: { id },
@@ -70,7 +70,7 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const { user, error } = await authenticateRequest(request);
@@ -83,7 +83,7 @@ export async function PATCH(
       return errorResponse("Unauthorized", StatusCode.UNAUTHORIZED);
     }
 
-    const { id } = params;
+    const { id } = await context.params;
     const body = await request.json();
 
     // Validate input
