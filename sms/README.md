@@ -80,6 +80,51 @@ Routes live under `src/app/api`:
 - `PATCH /api/tasks/:id`
 - `GET /api/users/me`
 
+## Redis Caching Layer (Cache-Aside)
+
+This project uses Redis as a cache layer to reduce repeated database reads for frequently requested data.
+
+### What’s cached
+
+- `GET /api/users` (admin-only) caches the full API response body under a Redis key.
+
+### TTL policy
+
+- TTL: **60 seconds**
+- Rationale: keeps data reasonably fresh while significantly reducing load/latency for repeated admin dashboard requests.
+
+### Cache invalidation strategy
+
+- On `POST /api/auth/signup`, the `users:list` cache key is deleted to prevent serving stale user lists.
+
+### Where it’s implemented
+
+- Redis client: `src/lib/redis.ts`
+- Cache helpers: `src/lib/cache.ts`
+- Cache keys: `src/lib/cache-keys.ts`
+- Cached route: `src/app/api/users/route.ts`
+- Invalidation: `src/app/api/auth/signup/route.ts`
+
+### How to verify (hit vs miss)
+
+1. Start services (includes Redis):
+
+```bash
+docker-compose up -d
+```
+
+2. Call `GET /api/users` twice (as an admin user).
+
+On the first request you should see a log like:
+
+- `Cache Miss - Fetching from DB`
+
+On the second request (within 60 seconds):
+
+- `Cache Hit`
+
+If Redis is unavailable, requests still succeed (cache gracefully falls back to DB).
+
 ## Docs
 
 - `API_DOCUMENTATION.md`

@@ -4,6 +4,8 @@ import { prisma } from "@/lib/db";
 import { generateToken } from "@/lib/jwt";
 import { validateData } from "@/lib/validation";
 import { signupSchema } from "@/types/auth";
+import { cacheDel } from "@/lib/cache";
+import { CACHE_KEYS } from "@/lib/cache-keys";
 import {
   successResponse,
   validationError,
@@ -68,6 +70,8 @@ export async function POST(request: NextRequest) {
         expiresAt,
       },
     });
+
+    await cacheDel(CACHE_KEYS.usersList);
 
     return successResponse(
       {

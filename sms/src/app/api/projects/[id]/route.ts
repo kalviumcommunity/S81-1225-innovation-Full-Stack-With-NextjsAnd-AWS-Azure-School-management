@@ -11,7 +11,7 @@ import {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const { user, error } = await authenticateRequest(request);
@@ -24,7 +24,7 @@ export async function GET(
       return errorResponse("Unauthorized", StatusCode.UNAUTHORIZED);
     }
 
-    const { id } = params;
+    const { id } = await context.params;
 
     const project = await prisma.project.findUnique({
       where: { id },
