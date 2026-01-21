@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Button } from "@/components/ui/Button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { CommandPalette } from "@/components/search/CommandPalette";
+import { useUI } from "@/hooks/useUI";
 
 function NavLink({ href, label }: { href: string; label: string }) {
   const pathname = usePathname();
@@ -29,7 +30,7 @@ function NavLink({ href, label }: { href: string; label: string }) {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { user, token, logout } = useAuth();
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const { sidebarOpen, openSidebar, closeSidebar } = useUI();
 
   const displayName = useMemo(
     () => user?.firstName || user?.email || "",
@@ -44,7 +45,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <button
               type="button"
               className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-foreground/10 text-foreground/80 hover:text-foreground md:hidden"
-              onClick={() => setMobileOpen(true)}
+              onClick={openSidebar}
               aria-label="Open menu"
             >
               ☰
@@ -75,12 +76,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </header>
 
       {/* Mobile drawer */}
-      {mobileOpen ? (
+      {sidebarOpen ? (
         <div className="fixed inset-0 z-40 md:hidden">
           <button
             type="button"
             className="absolute inset-0 bg-black/30"
-            onClick={() => setMobileOpen(false)}
+            onClick={closeSidebar}
             aria-label="Close menu"
           />
           <div className="relative h-full w-72 border-r border-foreground/10 bg-background p-4">
@@ -89,7 +90,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <button
                 type="button"
                 className="rounded-md border border-foreground/10 px-3 py-1.5 text-sm text-foreground/80 hover:text-foreground"
-                onClick={() => setMobileOpen(false)}
+                onClick={closeSidebar}
               >
                 Close
               </button>
