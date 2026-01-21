@@ -1,11 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { apiFetch } from "@/utils/api-client";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { Input, Textarea } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { DataTable, type Column } from "@/components/ui/DataTable";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 
 type Project = {
   id: string;
@@ -27,6 +31,7 @@ function toIsoDateTimeLocal(value: string): string {
 
 export default function TasksPage() {
   const { token } = useAuth();
+  const searchParams = useSearchParams();
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -39,6 +44,16 @@ export default function TasksPage() {
   const [projectId, setProjectId] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("ALL");
+
+  useEffect(() => {
+    const q = searchParams.get("q");
+    if (q && q !== query) {
+      setQuery(q);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const canCreate = useMemo(() => !!title && !!projectId, [title, projectId]);
 
@@ -106,14 +121,58 @@ export default function TasksPage() {
     await loadAll();
   }
 
+  const filteredTasks = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return tasks.filter((t) => {
+      if (statusFilter !== "ALL" && t.status !== statusFilter) return false;
+      if (!q) return true;
+      return t.title.toLowerCase().includes(q);
+    });
+  }, [tasks, query, statusFilter]);
+
+  const columns = useMemo<Column<Task>[]>(
+    () => [
+      {
+        key: "title",
+        header: "Assignment",
+        cell: (t) => (
+          <span className="font-medium text-foreground">{t.title}</span>
+        ),
+      },
+      {
+        key: "status",
+        header: "Status",
+        widthClassName: "w-[140px]",
+        cell: (t) => (
+          <StatusBadge
+            variant={
+              t.status === "COMPLETED"
+                ? "success"
+                : t.status === "IN_PROGRESS"
+                  ? "warning"
+                  : "neutral"
+            }
+          >
+            {t.status}
+          </StatusBadge>
+        ),
+      },
+      {
+        key: "priority",
+        header: "Priority",
+        widthClassName: "w-[120px]",
+        cell: (t) => <span className="text-foreground/70">{t.priority}</span>,
+      },
+    ],
+    []
+  );
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold text-foreground">Tasks</h1>
-        <p className="mt-1 text-sm text-foreground/70">
-          Create and track tasks across projects.
-        </p>
-      </div>
+      <PageHeader
+        title="Assignments"
+        subtitle="Create and track assignments across courses (stored as tasks)."
+      />
 
       <Card>
         <CardHeader title="Create task" />
@@ -196,36 +255,35 @@ export default function TasksPage() {
 
       <Card>
         <CardHeader
-          title="Recent tasks"
-          description={loading ? "Loading…" : `${tasks.length} total`}
+          title="Recent assignments"
+          description={loading ? "Loading…" : `${filteredTasks.length} shown`}
         />
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="text-foreground/70">
-              <tr className="border-b border-foreground/10">
-                <th className="py-2 pr-4">Title</th>
-                <th className="py-2 pr-4">Status</th>
-                <th className="py-2 pr-4">Priority</th>
-              </tr>
-            </thead>
-            <tbody>
-              {tasks.map((t) => (
-                <tr key={t.id} className="border-b border-foreground/10">
-                  <td className="py-2 pr-4 text-foreground">{t.title}</td>
-                  <td className="py-2 pr-4 text-foreground/70">{t.status}</td>
-                  <td className="py-2 pr-4 text-foreground/70">{t.priority}</td>
-                </tr>
-              ))}
-              {!loading && tasks.length === 0 ? (
-                <tr>
-                  <td className="py-3 text-foreground/60" colSpan={3}>
-                    No tasks found.
-                  </td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
+
+        <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search assignments…"
+          />
+          <select
+            className="h-10 w-full rounded-md border border-foreground/15 bg-background px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/20"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="ALL">All statuses</option>
+            <option value="TODO">TODO</option>
+            <option value="IN_PROGRESS">IN_PROGRESS</option>
+            <option value="COMPLETED">COMPLETED</option>
+            <option value="CANCELLED">CANCELLED</option>
+          </select>
+          <div />
         </div>
+
+        <DataTable
+          columns={columns}
+          rows={filteredTasks}
+          emptyMessage={loading ? "Loading…" : "No assignments found."}
+        />
       </Card>
     </div>
   );
