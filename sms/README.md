@@ -64,6 +64,43 @@ npm run db:migrate
 npm run db:studio
 ```
 
+## Global State Management (Context + Hooks)
+
+This codebase uses React Context + custom hooks to share global state without prop-drilling.
+
+### Folder structure
+
+- `src/context/AuthContext.tsx` – authentication state (token, user) + actions (login/signup/logout)
+- `src/context/UIContext.tsx` – UI state (theme + mobile sidebar) using a `useReducer` action pattern
+- `src/hooks/useAuth.ts` – ergonomic wrapper around `useAuthContext()` (adds derived fields like `isAuthenticated`)
+- `src/hooks/useUI.ts` – ergonomic wrapper around `useUIContext()` (adds derived fields like `isDark`)
+
+For backward compatibility, existing imports like `@/components/auth/AuthProvider` continue to work (it re-exports the new context + hook).
+
+### Providers
+
+Global providers are mounted once in the app root via [sms/src/components/Providers.tsx](sms/src/components/Providers.tsx).
+
+### State flow (examples)
+
+- Auth flow:
+  - `login()` calls `POST /api/auth/login` → stores token in `localStorage` → updates `AuthContext`
+  - `logout()` calls `POST /api/auth/logout` → clears token → updates `AuthContext`
+- UI flow:
+  - `toggleTheme()` dispatches a reducer action → applies `html[data-theme]` → persists `sms_theme` in `localStorage`
+  - `openSidebar()/closeSidebar()` dispatches reducer actions → `AppShell` reads `sidebarOpen` globally
+
+### Evidence / debugging
+
+- Dev-only console logs are emitted on auth + UI transitions (e.g., `[auth] login`, `[ui] toggleTheme`).
+- Use React DevTools → Components to inspect `AuthProvider` / `UIProvider` values.
+
+### Performance notes
+
+- Context values are memoized to limit unnecessary re-renders.
+- UI state uses a reducer for predictable transitions and easier debugging.
+- Avoid putting high-frequency values (like keystrokes) into global context unless necessary.
+
 ## API Routes
 
 Routes live under `src/app/api`:
