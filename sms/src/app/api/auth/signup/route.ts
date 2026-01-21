@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
       console.warn("Welcome email failed (non-blocking):", emailError);
     }
 
-    return successResponse(
+    const response = successResponse(
       {
         user,
         token,
@@ -92,6 +92,18 @@ export async function POST(request: NextRequest) {
       "User registered successfully",
       StatusCode.CREATED
     );
+
+    response.cookies.set({
+      name: "token",
+      value: token,
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: 7 * 24 * 60 * 60,
+    });
+
+    return response;
   } catch (error) {
     console.error("Signup error:", error);
     return errorResponse(

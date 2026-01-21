@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
       }),
     ]);
 
-    return successResponse(
+    const response = successResponse(
       {
         user: {
           id: user.id,
@@ -81,6 +81,18 @@ export async function POST(request: NextRequest) {
       },
       "Login successful"
     );
+
+    response.cookies.set({
+      name: "token",
+      value: token,
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: 7 * 24 * 60 * 60,
+    });
+
+    return response;
   } catch (error) {
     console.error("Login error:", error);
     return errorResponse("Failed to login", StatusCode.INTERNAL_SERVER_ERROR);
