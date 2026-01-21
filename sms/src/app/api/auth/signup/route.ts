@@ -6,6 +6,7 @@ import { validateData } from "@/lib/validation";
 import { signupSchema } from "@/types/auth";
 import { cacheDel } from "@/lib/cache";
 import { CACHE_KEYS } from "@/lib/cache-keys";
+import { sendWelcomeEmail } from "@/lib/email";
 import {
   successResponse,
   validationError,
@@ -72,6 +73,16 @@ export async function POST(request: NextRequest) {
     });
 
     await cacheDel(CACHE_KEYS.usersList);
+
+    // Fire-and-forget welcome email (do not block signup on email failures)
+    try {
+      await sendWelcomeEmail({
+        to: user.email,
+        firstName: user.firstName,
+      });
+    } catch (emailError) {
+      console.warn("Welcome email failed (non-blocking):", emailError);
+    }
 
     return successResponse(
       {

@@ -5,6 +5,11 @@ const serverSchema = z.object({
   REDIS_URL: z.string().min(1, "REDIS_URL is required"),
   JWT_SECRET: z.string().min(1, "JWT_SECRET is required"),
 
+  // Optional: SendGrid transactional email
+  SENDGRID_API_KEY: z.string().min(1).optional(),
+  SENDGRID_SENDER: z.string().min(1).optional(),
+  SENDGRID_SANDBOX_MODE: z.coerce.boolean().optional(),
+
   // Optional: only required if using S3 pre-signed upload feature
   AWS_ACCESS_KEY_ID: z.string().min(1).optional(),
   AWS_SECRET_ACCESS_KEY: z.string().min(1).optional(),
@@ -32,6 +37,10 @@ export function getServerEnv(): ServerEnv {
     DATABASE_URL: process.env.DATABASE_URL,
     REDIS_URL: process.env.REDIS_URL,
     JWT_SECRET: process.env.JWT_SECRET,
+
+    SENDGRID_API_KEY: process.env.SENDGRID_API_KEY,
+    SENDGRID_SENDER: process.env.SENDGRID_SENDER,
+    SENDGRID_SANDBOX_MODE: process.env.SENDGRID_SANDBOX_MODE,
 
     AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
     AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,

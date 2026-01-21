@@ -80,6 +80,8 @@ Routes live under `src/app/api`:
 - `PATCH /api/tasks/:id`
 - `GET /api/users/me`
 
+- `POST /api/email` (authenticated) – send transactional email (SendGrid)
+
 ### Secure file uploads (Pre-signed S3 URLs)
 
 New routes:
@@ -211,6 +213,102 @@ On the second request (within 60 seconds):
 - `Cache Hit`
 
 If Redis is unavailable, requests still succeed (cache gracefully falls back to DB).
+
+## Transactional Email (SendGrid)
+
+This project supports transactional emails for trigger-based notifications like:
+
+- Welcome emails after signup
+- Password reset links (future)
+- Security alerts / activity notifications (future)
+
+### Provider choice
+
+Implemented provider: **SendGrid** (fast setup with an API key + verified sender).
+
+### Environment variables
+
+Server-only variables (in `.env.local`):
+
+- `SENDGRID_API_KEY`
+- `SENDGRID_SENDER` (must be a verified sender identity)
+- `SENDGRID_SANDBOX_MODE` (optional)
+
+### API route
+
+- `POST /api/email` – sends an HTML email via SendGrid
+- Auth: requires `Authorization: Bearer <token>` (prevents open relay abuse)
+- Rate limit (dev-friendly, in-memory): **10 emails/minute per user**
+
+Request body:
+
+```json
+{
+  "to": "student@example.com",
+  "subject": "Welcome!",
+  "message": "<h3>Hello from SMS</h3>"
+}
+```
+
+### Templates
+
+- Welcome email template: [src/lib/email/templates/welcome.ts](src/lib/email/templates/welcome.ts)
+- Signup sends welcome email (non-blocking): [src/app/api/auth/signup/route.ts](src/app/api/auth/signup/route.ts)
+
+### Testing (curl)
+
+1. Signup to get a token:
+
+```bash
+curl -X POST http://localhost:3000/api/auth/signup \
+  -H "Content-Type: application/json" \
+  -d '{"email":"student@example.com","password":"StrongPass1!","confirmPassword":"StrongPass1!","firstName":"Student","lastName":"One"}'
+```
+
+2. Send an email (replace `<token>`):
+
+```bash
+curl -X POST http://localhost:3000/api/email \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{"to":"student@example.com","subject":"Welcome!","message":"<h3>Hello from SMS</h3>"}'
+```
+
+Expected response:
+
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Email sent successfully",
+  "data": {
+    "provider": "sendgrid",
+    "messageId": "...",
+    "headers": {}
+  }
+}
+```
+
+Server logs include the provider + `messageId`.
+
+### Sandbox vs production
+
+- SendGrid requires a verified sender identity for best deliverability.
+- For safe testing, set `SENDGRID_SANDBOX_MODE=true` to validate requests and templates without delivering mail.
+
+### Rate limits and retry logic
+
+- The API route includes a simple per-user rate limiter.
+- For production/high volume, prefer:
+  - background queues (BullMQ/SQS)
+  - exponential backoff + retry on transient failures
+  - idempotency keys to avoid duplicate sends
+
+### Bounce handling
+
+- SendGrid will report bounces/blocks/helpful events in the dashboard.
+- For production, configure the SendGrid **Event Webhook** to capture bounces and mark emails/users accordingly.
+- Keep SPF/DKIM configured in sender authentication to reduce spam placement.
 
 ## Docs
 
