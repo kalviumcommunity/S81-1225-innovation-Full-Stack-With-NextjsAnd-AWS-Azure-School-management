@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { useAuth } from "@/components/auth/AuthProvider";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 export function TopNav() {
   const pathname = usePathname();
@@ -40,6 +41,7 @@ export function TopNav() {
         </nav>
 
         <div className="flex items-center gap-3 text-sm">
+          <ThemeToggle />
           {user ? (
             <>
               <span className="text-foreground/70">

@@ -1,9 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { apiFetch } from "@/utils/api-client";
 import { Card, CardHeader } from "@/components/ui/Card";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { Input } from "@/components/ui/Input";
+import { DataTable, type Column } from "@/components/ui/DataTable";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 
 type UserRow = {
   id: string;
@@ -17,10 +22,25 @@ type UserRow = {
 
 export default function UsersPage() {
   const { token, user } = useAuth();
+  const searchParams = useSearchParams();
 
   const [users, setUsers] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [query, setQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState<string>("ALL");
+  const [activeFilter, setActiveFilter] = useState<string>("ALL");
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
+
+  useEffect(() => {
+    const q = searchParams.get("q");
+    if (q && q !== query) {
+      setQuery(q);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   useEffect(() => {
     let mounted = true;
@@ -51,6 +71,71 @@ export default function UsersPage() {
     };
   }, [token]);
 
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+
+    return users
+      .filter((u) => {
+        if (roleFilter !== "ALL" && u.role !== roleFilter) return false;
+        if (activeFilter === "ACTIVE" && !u.isActive) return false;
+        if (activeFilter === "INACTIVE" && u.isActive) return false;
+
+        if (!q) return true;
+        const name = `${u.firstName || ""} ${u.lastName || ""}`.trim();
+        return (
+          name.toLowerCase().includes(q) ||
+          u.email.toLowerCase().includes(q) ||
+          u.role.toLowerCase().includes(q)
+        );
+      })
+      .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+  }, [users, query, roleFilter, activeFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const pageRows = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filtered.slice(start, start + pageSize);
+  }, [filtered, currentPage]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [query, roleFilter, activeFilter]);
+
+  const columns = useMemo<Column<UserRow>[]>(
+    () => [
+      {
+        key: "name",
+        header: "Name",
+        cell: (u) => (
+          <div>
+            <div className="font-medium text-foreground">
+              {(u.firstName || "") + " " + (u.lastName || "")}
+            </div>
+            <div className="text-xs text-foreground/60">{u.email}</div>
+          </div>
+        ),
+      },
+      {
+        key: "role",
+        header: "Role",
+        widthClassName: "w-[120px]",
+        cell: (u) => <StatusBadge variant="neutral">{u.role}</StatusBadge>,
+      },
+      {
+        key: "status",
+        header: "Status",
+        widthClassName: "w-[120px]",
+        cell: (u) => (
+          <StatusBadge variant={u.isActive ? "success" : "danger"}>
+            {u.isActive ? "Active" : "Inactive"}
+          </StatusBadge>
+        ),
+      },
+    ],
+    []
+  );
+
   if (user?.role !== "ADMIN") {
     return (
       <Card>
@@ -64,52 +149,76 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold text-foreground">Users</h1>
-        <p className="mt-1 text-sm text-foreground/70">
-          Admin-only user directory (cached via Redis).
-        </p>
-      </div>
+      <PageHeader
+        title="Student & Staff Directory"
+        subtitle="Admin-only directory (cached via Redis)."
+      />
 
       <Card>
         <CardHeader
           title="All users"
-          description={loading ? "Loading…" : `${users.length} total`}
+          description={loading ? "Loading…" : `${filtered.length} matching`}
         />
         {error ? <p className="mb-3 text-sm text-red-600">{error}</p> : null}
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="text-foreground/70">
-              <tr className="border-b border-foreground/10">
-                <th className="py-2 pr-4">Name</th>
-                <th className="py-2 pr-4">Email</th>
-                <th className="py-2 pr-4">Role</th>
-                <th className="py-2 pr-4">Active</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((u) => (
-                <tr key={u.id} className="border-b border-foreground/10">
-                  <td className="py-2 pr-4 text-foreground">
-                    {(u.firstName || "") + " " + (u.lastName || "")}
-                  </td>
-                  <td className="py-2 pr-4 text-foreground/70">{u.email}</td>
-                  <td className="py-2 pr-4 text-foreground/70">{u.role}</td>
-                  <td className="py-2 pr-4 text-foreground/70">
-                    {u.isActive ? "Yes" : "No"}
-                  </td>
-                </tr>
-              ))}
-              {!loading && users.length === 0 ? (
-                <tr>
-                  <td className="py-3 text-foreground/60" colSpan={4}>
-                    No users found.
-                  </td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
+        <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search name, email, role…"
+          />
+
+          <select
+            className="h-10 w-full rounded-md border border-foreground/15 bg-background px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/20"
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value)}
+          >
+            <option value="ALL">All roles</option>
+            <option value="ADMIN">Admin</option>
+            <option value="TEACHER">Teacher</option>
+            <option value="STUDENT">Student</option>
+            <option value="PARENT">Parent</option>
+          </select>
+
+          <select
+            className="h-10 w-full rounded-md border border-foreground/15 bg-background px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/20"
+            value={activeFilter}
+            onChange={(e) => setActiveFilter(e.target.value)}
+          >
+            <option value="ALL">All statuses</option>
+            <option value="ACTIVE">Active</option>
+            <option value="INACTIVE">Inactive</option>
+          </select>
+        </div>
+
+        <DataTable
+          columns={columns}
+          rows={pageRows}
+          emptyMessage={loading ? "Loading…" : "No users match your filters."}
+        />
+
+        <div className="mt-4 flex items-center justify-between">
+          <p className="text-xs text-foreground/60">
+            Page {currentPage} of {totalPages}
+          </p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              className="rounded-md border border-foreground/10 px-3 py-1.5 text-sm text-foreground/80 disabled:opacity-50"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage <= 1}
+            >
+              Prev
+            </button>
+            <button
+              type="button"
+              className="rounded-md border border-foreground/10 px-3 py-1.5 text-sm text-foreground/80 disabled:opacity-50"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage >= totalPages}
+            >
+              Next
+            </button>
+          </div>
         </div>
       </Card>
     </div>

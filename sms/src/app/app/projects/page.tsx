@@ -1,11 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { apiFetch } from "@/utils/api-client";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { Input, Textarea } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { DataTable, type Column } from "@/components/ui/DataTable";
 
 type Project = {
   id: string;
@@ -25,6 +28,7 @@ function toIsoDateTimeLocal(value: string): string {
 
 export default function ProjectsPage() {
   const { token } = useAuth();
+  const searchParams = useSearchParams();
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,6 +39,15 @@ export default function ProjectsPage() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [query, setQuery] = useState("");
+
+  useEffect(() => {
+    const q = searchParams.get("q");
+    if (q && q !== query) {
+      setQuery(q);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   async function load() {
     if (!token) return;
@@ -88,14 +101,46 @@ export default function ProjectsPage() {
     await load();
   }
 
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return projects;
+    return projects.filter((p) => p.title.toLowerCase().includes(q));
+  }, [projects, query]);
+
+  const columns = useMemo<Column<Project>[]>(
+    () => [
+      {
+        key: "title",
+        header: "Course / Project",
+        cell: (p) => (
+          <div>
+            <div className="font-medium text-foreground">{p.title}</div>
+            {p.description ? (
+              <div className="mt-0.5 text-xs text-foreground/60 line-clamp-2">
+                {p.description}
+              </div>
+            ) : null}
+          </div>
+        ),
+      },
+      {
+        key: "tasks",
+        header: "Assignments",
+        widthClassName: "w-[140px]",
+        cell: (p) => (
+          <span className="text-foreground/70">{p._count?.tasks ?? 0}</span>
+        ),
+      },
+    ],
+    []
+  );
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold text-foreground">Projects</h1>
-        <p className="mt-1 text-sm text-foreground/70">
-          Create and manage projects.
-        </p>
-      </div>
+      <PageHeader
+        title="Courses"
+        subtitle="Create and manage courses (stored as projects)."
+      />
 
       <Card>
         <CardHeader
@@ -161,36 +206,23 @@ export default function ProjectsPage() {
 
       <Card>
         <CardHeader
-          title="Your projects"
-          description={loading ? "Loading…" : `${projects.length} total`}
+          title="Your courses"
+          description={loading ? "Loading…" : `${filtered.length} shown`}
         />
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="text-foreground/70">
-              <tr className="border-b border-foreground/10">
-                <th className="py-2 pr-4">Title</th>
-                <th className="py-2 pr-4">Tasks</th>
-              </tr>
-            </thead>
-            <tbody>
-              {projects.map((p) => (
-                <tr key={p.id} className="border-b border-foreground/10">
-                  <td className="py-2 pr-4 text-foreground">{p.title}</td>
-                  <td className="py-2 pr-4 text-foreground/70">
-                    {p._count?.tasks ?? 0}
-                  </td>
-                </tr>
-              ))}
-              {!loading && projects.length === 0 ? (
-                <tr>
-                  <td className="py-3 text-foreground/60" colSpan={2}>
-                    No projects found.
-                  </td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
+
+        <div className="mb-4">
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search courses…"
+          />
         </div>
+
+        <DataTable
+          columns={columns}
+          rows={filtered}
+          emptyMessage={loading ? "Loading…" : "No courses found."}
+        />
       </Card>
     </div>
   );
