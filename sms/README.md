@@ -82,6 +82,69 @@ Routes live under `src/app/api`:
 
 - `POST /api/email` (authenticated) – send transactional email (SendGrid)
 
+## App Router Routing (Public + Protected + Dynamic)
+
+This project uses Next.js App Router (file-based routing under `src/app`).
+
+### Route map
+
+Public routes:
+
+- `/` (home)
+- `/login`
+- `/signup`
+
+Protected routes (via middleware + JWT cookie):
+
+- `/dashboard`
+- `/users`
+- `/users/[id]` (dynamic)
+
+Existing protected dashboard area:
+
+- `/app` (client-side protected via `RequireAuth` + app shell)
+
+### Middleware protection
+
+Middleware is implemented in [sms/src/middleware.ts](sms/src/middleware.ts) and:
+
+- Allows public routes
+- For `/dashboard` and `/users/*`, requires a valid JWT stored in a `token` cookie
+- Redirects unauthenticated users to `/login?next=<path>`
+
+Auth cookie is set/cleared by the API routes:
+
+- Login sets cookie: [sms/src/app/api/auth/login/route.ts](sms/src/app/api/auth/login/route.ts)
+- Signup sets cookie: [sms/src/app/api/auth/signup/route.ts](sms/src/app/api/auth/signup/route.ts)
+- Logout clears cookie: [sms/src/app/api/auth/logout/route.ts](sms/src/app/api/auth/logout/route.ts)
+
+### Dynamic routes + breadcrumbs
+
+- Users list: [sms/src/app/users/page.tsx](sms/src/app/users/page.tsx)
+- User profile (dynamic): [sms/src/app/users/[id]/page.tsx](sms/src/app/users/[id]/page.tsx)
+
+The dynamic user page renders a breadcrumb trail (Dashboard → Users → User) to improve navigation and provide clearer structure.
+
+### 404 and error handling
+
+- Custom 404 page: [sms/src/app/not-found.tsx](sms/src/app/not-found.tsx)
+- Users error boundary: [sms/src/app/users/error.tsx](sms/src/app/users/error.tsx)
+
+### SEO reflection
+
+- Dynamic routes scale cleanly: you can add new users without changing the route table.
+- Breadcrumbs and a predictable URL structure (`/users/[id]`) help both usability and SEO (clear hierarchy).
+- `generateMetadata` in the dynamic route can set per-user titles/descriptions for better indexing.
+
+### Screenshots checklist (for lesson deliverables)
+
+- Home page (`/`)
+- Redirect from `/dashboard` to `/login` when logged out
+- Successful access to `/dashboard` when logged in
+- Dynamic user pages: `/users/<id>` for at least 2 users
+- Breadcrumbs visible on the user profile page
+- Custom 404 for an unknown route (e.g., `/does-not-exist`)
+
 ### Secure file uploads (Pre-signed S3 URLs)
 
 New routes:

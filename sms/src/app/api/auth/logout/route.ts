@@ -20,7 +20,17 @@ export async function POST(request: NextRequest) {
       where: { userId: user.userId },
     });
 
-    return successResponse(null, "Logout successful");
+    const response = successResponse(null, "Logout successful");
+    response.cookies.set({
+      name: "token",
+      value: "",
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: 0,
+    });
+    return response;
   } catch (error) {
     console.error("Logout error:", error);
     return errorResponse("Failed to logout", StatusCode.INTERNAL_SERVER_ERROR);
