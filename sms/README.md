@@ -189,6 +189,51 @@ New routes:
 - `POST /api/upload` – generate a short-lived pre-signed **PUT** URL
 - `POST /api/files` – store uploaded file metadata in Postgres
 
+## Forms (React Hook Form + Zod)
+
+This codebase uses **Zod** for schema validation and **React Hook Form** for performant client-side form state.
+
+### Why this combo
+
+- React Hook Form minimizes re-renders and keeps form state ergonomic.
+- Zod schemas provide reusable, type-safe validation rules.
+- `@hookform/resolvers/zod` bridges Zod errors into RHF’s `formState.errors`.
+
+### Example: Signup form
+
+- Schema lives in [sms/src/types/auth.ts](sms/src/types/auth.ts)
+- The page integrates RHF + `zodResolver` in [sms/src/app/(auth)/signup/page.tsx](<sms/src/app/(auth)/signup/page.tsx>)
+
+Key idea: the **same Zod schema** can be reused on the server (API validation) and the client (form validation), reducing mismatched rules.
+
+### Reusable field component
+
+To avoid repeating input + error markup, a reusable field component is provided:
+
+- [sms/src/components/FormInput.tsx](sms/src/components/FormInput.tsx)
+
+It includes accessibility basics:
+
+- `label` is linked via `htmlFor` + `id`
+- invalid state uses `aria-invalid`
+- error text uses `aria-describedby` pointing to an error element id
+
+### Example: Contact form
+
+- [sms/src/app/contact/page.tsx](sms/src/app/contact/page.tsx)
+
+### Screenshots / evidence checklist (lesson deliverables)
+
+- Signup page showing client-side validation errors
+- Signup page showing a server error (e.g., duplicate email)
+- Contact form showing validation errors + a successful submit state
+
+### Reflection notes
+
+- Compared to manual `useState` + hand-rolled validation, RHF + Zod is easier to maintain and scales across multiple forms.
+- Storing validation rules in schemas keeps UI code clean and encourages reuse.
+- Accessibility improves when labels + error descriptions are consistently wired.
+
 Environment variables (server-only):
 
 - `AWS_REGION`

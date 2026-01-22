@@ -1,45 +1,44 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Card, CardHeader } from "@/components/ui/Card";
-import { Input } from "@/components/ui/Input";
 import { Button, LinkButton } from "@/components/ui/Button";
 import { useAuth } from "@/components/auth/AuthProvider";
+import FormInput from "@/components/FormInput";
+import { signupSchema, type SignupInput } from "@/types/auth";
 
 export default function SignupPage() {
   const { signup } = useAuth();
   const router = useRouter();
 
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors, isSubmitting },
+  } = useForm<SignupInput>({
+    resolver: zodResolver(signupSchema),
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+    },
+  });
 
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setSubmitting(true);
-    setError(null);
-
-    const res = await signup({
-      email,
-      password,
-      confirmPassword,
-      firstName,
-      lastName,
-    });
-    setSubmitting(false);
+  const onSubmit = handleSubmit(async (data) => {
+    const res = await signup(data);
 
     if (!res.ok) {
-      setError(res.message);
+      setError("root", { type: "server", message: res.message });
       return;
     }
 
     router.replace("/app");
-  }
+  });
 
   return (
     <div className="mx-auto flex min-h-screen max-w-6xl items-center justify-center px-6">
@@ -50,74 +49,63 @@ export default function SignupPage() {
             description="Create a student account to start using the system."
           />
 
-          <form className="space-y-4" onSubmit={onSubmit}>
+          <form className="space-y-4" onSubmit={onSubmit} noValidate>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">
-                  First name
-                </label>
-                <Input
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">
-                  Last name
-                </label>
-                <Input
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">
-                Email
-              </label>
-              <Input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@school.edu"
-                required
+              <FormInput
+                label="First name"
+                name="firstName"
+                register={register}
+                error={errors.firstName?.message}
+                autoComplete="given-name"
+              />
+              <FormInput
+                label="Last name"
+                name="lastName"
+                register={register}
+                error={errors.lastName?.message}
+                autoComplete="family-name"
               />
             </div>
 
+            <FormInput
+              label="Email"
+              name="email"
+              type="email"
+              register={register}
+              error={errors.email?.message}
+              placeholder="you@school.edu"
+              autoComplete="email"
+            />
+
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">
-                Password
-              </label>
-              <Input
+              <FormInput
+                label="Password"
+                name="password"
                 type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
+                register={register}
+                error={errors.password?.message}
+                autoComplete="new-password"
               />
               <p className="text-xs text-foreground/60">
                 Must match the server password rules.
               </p>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">
-                Confirm password
-              </label>
-              <Input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-              />
-            </div>
+            <FormInput
+              label="Confirm password"
+              name="confirmPassword"
+              type="password"
+              register={register}
+              error={errors.confirmPassword?.message}
+              autoComplete="new-password"
+            />
 
-            {error ? <p className="text-sm text-red-600">{error}</p> : null}
+            {errors.root?.message ? (
+              <p className="text-sm text-red-600">{errors.root.message}</p>
+            ) : null}
 
-            <Button type="submit" className="w-full" disabled={submitting}>
-              {submitting ? "Creating…" : "Create account"}
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? "Creating…" : "Create account"}
             </Button>
 
             <div className="flex items-center justify-between pt-2">
