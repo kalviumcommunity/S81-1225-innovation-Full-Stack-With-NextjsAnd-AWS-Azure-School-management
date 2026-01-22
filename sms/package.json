@@ -35,6 +35,7 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "redis": "^4.6.12",
+    "swr": "^2.3.8",
     "zod": "^3.22.4"
   },
   "devDependencies": {
