@@ -23,6 +23,7 @@ const ThemeContext = createContext<ThemeState | null>(null);
 function applyTheme(theme: Theme) {
   if (typeof document === "undefined") return;
   document.documentElement.dataset.theme = theme;
+  document.documentElement.classList.toggle("dark", theme === "dark");
 }
 
 function readStoredTheme(): Theme | null {

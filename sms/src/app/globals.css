@@ -5,7 +5,8 @@
     --foreground: #171717;
 }
 
-html[data-theme="dark"] {
+html[data-theme="dark"],
+html.dark {
     --background: #0b1020;
     --foreground: #f4f6fb;
 }
