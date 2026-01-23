@@ -87,8 +87,55 @@ Global providers are mounted once in the app root via [sms/src/components/Provid
   - `login()` calls `POST /api/auth/login` → stores token in `localStorage` → updates `AuthContext`
   - `logout()` calls `POST /api/auth/logout` → clears token → updates `AuthContext`
 - UI flow:
-  - `toggleTheme()` dispatches a reducer action → applies `html[data-theme]` → persists `sms_theme` in `localStorage`
+  - `toggleTheme()` dispatches a reducer action → applies `html[data-theme]` + `.dark` class → persists `sms_theme` in `localStorage`
   - `openSidebar()/closeSidebar()` dispatches reducer actions → `AppShell` reads `sidebarOpen` globally
+
+## Responsive UI + Themes (Tailwind)
+
+This project uses Tailwind CSS for responsive styling and a light/dark theme.
+
+### Tailwind configuration summary
+
+- Config file: [sms/tailwind.config.js](sms/tailwind.config.js)
+- Custom breakpoints:
+  - `sm: 640px`, `md: 768px`, `lg: 1024px`, `xl: 1280px`
+- Theme tokens:
+  - `brand.light`, `brand`, `brand.dark`
+
+### Dark mode implementation
+
+- Theme is stored in `localStorage` under `sms_theme`.
+- The active theme is applied by setting:
+  - `document.documentElement.dataset.theme = "light" | "dark"`
+  - `document.documentElement.classList.toggle("dark", theme === "dark")`
+- This supports both:
+  - CSS-variable theming via `html[data-theme="dark"]` (see [sms/src/app/globals.css](sms/src/app/globals.css))
+  - Tailwind `dark:` variants via the `.dark` class
+
+Contrast / accessibility notes:
+
+- The base UI uses CSS variables (`--background`, `--foreground`) to keep contrast consistent across the app.
+- Dark mode uses a very dark background (`#0b1020`) and near-white foreground (`#f4f6fb`) to maintain readability.
+- Interactive elements use borders (`border-foreground/10`) and hover states (`hover:text-foreground`, `hover:bg-foreground/5`) so focus/intent stays visible in both themes.
+
+### Responsiveness evidence (what to capture)
+
+Use Chrome DevTools → Device Toolbar:
+
+- Mobile (<= `sm`): check nav wrapping + dashboard drawer
+- Tablet (`md`): check sidebar layout + spacing
+- Desktop (`lg`/`xl`): check full dashboard layout
+
+Screenshots/GIFs to include:
+
+- Save images under [sms/docs/screenshots](sms/docs/screenshots)
+- Light mode + dark mode (same screen)
+- Mobile + tablet + desktop (same screen)
+
+Suggested filenames:
+
+- `home-mobile-light.png`, `home-mobile-dark.png`
+- `home-tablet-light.png`, `home-desktop-light.png`
 
 ### Evidence / debugging
 

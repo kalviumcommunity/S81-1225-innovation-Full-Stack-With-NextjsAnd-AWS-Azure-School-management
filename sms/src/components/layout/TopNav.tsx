@@ -15,8 +15,8 @@ export function TopNav() {
 
   return (
     <header className="border-b border-foreground/10 bg-background">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
-        <nav className="flex items-center gap-4 text-sm">
+      <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <nav className="flex flex-wrap items-center gap-3 text-sm">
           <Link className="font-medium text-foreground" href="/">
             Home
           </Link>
@@ -40,7 +40,7 @@ export function TopNav() {
           </Link>
         </nav>
 
-        <div className="flex items-center gap-3 text-sm">
+        <div className="flex flex-wrap items-center justify-end gap-3 text-sm">
           <ThemeToggle />
           {user ? (
             <>
