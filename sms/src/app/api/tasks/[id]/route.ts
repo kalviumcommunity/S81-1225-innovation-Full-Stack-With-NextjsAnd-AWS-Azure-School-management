@@ -136,3 +136,50 @@ export async function PATCH(
     );
   }
 }
+
+export async function DELETE(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { user, error } = await authenticateRequest(request);
+
+    if (error) {
+      return error;
+    }
+
+    if (!user) {
+      return errorResponse("Unauthorized", StatusCode.UNAUTHORIZED);
+    }
+
+    const { id } = await context.params;
+
+    const task = await prisma.task.findUnique({
+      where: { id },
+    });
+
+    if (!task) {
+      return notFoundResponse("Task not found");
+    }
+
+    if (
+      task.createdBy !== user.userId &&
+      task.assignedTo !== user.userId &&
+      user.role !== "ADMIN"
+    ) {
+      return forbiddenResponse();
+    }
+
+    await prisma.task.delete({
+      where: { id },
+    });
+
+    return successResponse({ id }, "Task deleted successfully");
+  } catch (error) {
+    console.error("Delete task error:", error);
+    return errorResponse(
+      "Failed to delete task",
+      StatusCode.INTERNAL_SERVER_ERROR
+    );
+  }
+}

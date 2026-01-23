@@ -8,6 +8,8 @@ import { Button, LinkButton } from "@/components/ui/Button";
 import { useAuth } from "@/components/auth/AuthProvider";
 import FormInput from "@/components/FormInput";
 import { signupSchema, type SignupInput } from "@/types/auth";
+import { toast } from "sonner";
+import { Spinner } from "@/components/ui/Spinner";
 
 export default function SignupPage() {
   const { signup } = useAuth();
@@ -30,13 +32,16 @@ export default function SignupPage() {
   });
 
   const onSubmit = handleSubmit(async (data) => {
+    const toastId = toast.loading("Creating account…");
     const res = await signup(data);
 
     if (!res.ok) {
       setError("root", { type: "server", message: res.message });
+      toast.error(res.message || "Signup failed", { id: toastId });
       return;
     }
 
+    toast.success("Account created! Redirecting…", { id: toastId });
     router.replace("/app");
   });
 
@@ -50,6 +55,12 @@ export default function SignupPage() {
           />
 
           <form className="space-y-4" onSubmit={onSubmit} noValidate>
+            {isSubmitting ? (
+              <p role="status" aria-live="polite" className="sr-only">
+                Creating account…
+              </p>
+            ) : null}
+
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <FormInput
                 label="First name"
@@ -104,8 +115,20 @@ export default function SignupPage() {
               <p className="text-sm text-red-600">{errors.root.message}</p>
             ) : null}
 
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? "Creating…" : "Create account"}
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={isSubmitting}
+              aria-busy={isSubmitting}
+            >
+              {isSubmitting ? (
+                <span className="inline-flex items-center gap-2">
+                  <Spinner size="sm" />
+                  Creating…
+                </span>
+              ) : (
+                "Create account"
+              )}
             </Button>
 
             <div className="flex items-center justify-between pt-2">
