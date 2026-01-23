@@ -10,6 +10,9 @@ import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { DataTable, type Column } from "@/components/ui/DataTable";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { toast } from "sonner";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { Spinner } from "@/components/ui/Spinner";
 
 type Project = {
   id: string;
@@ -44,6 +47,8 @@ export default function TasksPage() {
   const [projectId, setProjectId] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
 
@@ -94,6 +99,7 @@ export default function TasksPage() {
     e.preventDefault();
     if (!token || !canCreate) return;
 
+    const toastId = toast.loading("Creating assignment…");
     setSubmitting(true);
     setError(null);
 
@@ -110,14 +116,46 @@ export default function TasksPage() {
 
     if (!res.success) {
       setError(res.message);
+      toast.error(res.message || "Failed to create assignment", {
+        id: toastId,
+      });
       return;
     }
+
+    toast.success("Assignment created", { id: toastId });
 
     setTitle("");
     setDescription("");
     setPriority(1);
     setProjectId("");
     setDueDate("");
+    await loadAll();
+  }
+
+  async function onDeleteTask(taskId: string) {
+    if (!token) return;
+
+    const toastId = toast.loading("Deleting assignment…");
+    setDeleting(true);
+    setError(null);
+
+    const res = await apiFetch<{ id: string }>(`/tasks/${taskId}`, {
+      method: "DELETE",
+      token,
+    });
+
+    setDeleting(false);
+
+    if (!res.success) {
+      setError(res.message);
+      toast.error(res.message || "Failed to delete assignment", {
+        id: toastId,
+      });
+      return;
+    }
+
+    toast.success("Assignment deleted", { id: toastId });
+    setDeletingId(null);
     await loadAll();
   }
 
@@ -163,8 +201,31 @@ export default function TasksPage() {
         widthClassName: "w-[120px]",
         cell: (t) => <span className="text-foreground/70">{t.priority}</span>,
       },
+      {
+        key: "actions",
+        header: "",
+        widthClassName: "w-[140px]",
+        cell: (t) => (
+          <ConfirmDialog
+            open={deletingId === t.id}
+            onOpenChange={(open) => setDeletingId(open ? t.id : null)}
+            title="Delete assignment?"
+            description="This action cannot be undone."
+            confirmLabel={
+              deletingId === t.id && deleting ? "Deleting…" : "Delete"
+            }
+            confirmVariant="danger"
+            confirmDisabled={deleting}
+            onConfirm={() => onDeleteTask(t.id)}
+          >
+            <Button variant="secondary" type="button" className="px-3">
+              Delete
+            </Button>
+          </ConfirmDialog>
+        ),
+      },
     ],
-    []
+    [deletingId, deleting, token]
   );
 
   return (
@@ -180,6 +241,12 @@ export default function TasksPage() {
           className="grid grid-cols-1 gap-4 md:grid-cols-2"
           onSubmit={onCreate}
         >
+          {submitting ? (
+            <p role="status" aria-live="polite" className="sr-only">
+              Creating assignment…
+            </p>
+          ) : null}
+
           <div className="space-y-2 md:col-span-1">
             <label className="text-sm font-medium text-foreground">Title</label>
             <Input
@@ -246,8 +313,19 @@ export default function TasksPage() {
             {error ? (
               <p className="mb-2 text-sm text-red-600">{error}</p>
             ) : null}
-            <Button type="submit" disabled={submitting || !canCreate}>
-              {submitting ? "Creating…" : "Create task"}
+            <Button
+              type="submit"
+              disabled={submitting || !canCreate}
+              aria-busy={submitting}
+            >
+              {submitting ? (
+                <span className="inline-flex items-center gap-2">
+                  <Spinner size="sm" />
+                  Creating…
+                </span>
+              ) : (
+                "Create task"
+              )}
             </Button>
           </div>
         </form>

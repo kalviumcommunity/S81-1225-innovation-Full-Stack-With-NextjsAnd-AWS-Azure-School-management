@@ -3,6 +3,7 @@
 import { AuthProvider } from "@/context/AuthContext";
 import { UIProvider } from "@/context/UIContext";
 import { SWRConfig } from "swr";
+import { Toaster } from "sonner";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -17,7 +18,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
       }}
     >
       <AuthProvider>
-        <UIProvider>{children}</UIProvider>
+        <UIProvider>
+          {children}
+          <Toaster richColors position="top-right" closeButton />
+        </UIProvider>
       </AuthProvider>
     </SWRConfig>
   );

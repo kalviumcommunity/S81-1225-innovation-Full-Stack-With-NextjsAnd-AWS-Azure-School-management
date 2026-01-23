@@ -218,6 +218,43 @@ It includes accessibility basics:
 - invalid state uses `aria-invalid`
 - error text uses `aria-describedby` pointing to an error element id
 
+## Feedback Layers (Toasts, Modals, Loaders)
+
+This app uses lightweight feedback layers to communicate async state clearly and consistently.
+
+### Toasts (instant feedback)
+
+- Provider mounted once in [sms/src/components/Providers.tsx](sms/src/components/Providers.tsx)
+- Library: `sonner`
+- Examples:
+  - Signup success/failure: [sms/src/app/(auth)/signup/page.tsx](<sms/src/app/(auth)/signup/page.tsx>)
+  - Task create/delete: [sms/src/app/app/tasks/page.tsx](sms/src/app/app/tasks/page.tsx)
+
+Design + a11y notes:
+
+- Uses non-blocking notifications for success/error.
+- Uses a loading toast for pending operations, then updates to success/error.
+
+### Modals (blocking confirmation)
+
+- Component: [sms/src/components/ui/ConfirmDialog.tsx](sms/src/components/ui/ConfirmDialog.tsx)
+- Library: `@radix-ui/react-dialog` (focus trapping + Esc-to-close)
+- Example trigger:
+  - Delete assignment confirmation in [sms/src/app/app/tasks/page.tsx](sms/src/app/app/tasks/page.tsx)
+
+### Loaders / progress indicators
+
+- Spinner component: [sms/src/components/ui/Spinner.tsx](sms/src/components/ui/Spinner.tsx)
+- Integrated into async actions:
+  - Signup submit button shows spinner + `aria-busy`
+  - Create task button shows spinner + `aria-busy`
+
+UX principles followed:
+
+- Non-intrusive: toasts do not block the user.
+- Clear and consistent: success/error/pending states are visibly different.
+- Accessible: key async operations announce status via `role="status"`/`aria-live`, and the modal traps focus and supports keyboard close.
+
 ### Example: Contact form
 
 - [sms/src/app/contact/page.tsx](sms/src/app/contact/page.tsx)

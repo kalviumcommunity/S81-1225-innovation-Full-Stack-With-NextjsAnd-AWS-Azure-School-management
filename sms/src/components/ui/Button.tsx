@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ComponentProps } from "react";
 
-type ButtonVariant = "primary" | "secondary";
+type ButtonVariant = "primary" | "secondary" | "danger";
 
 type ButtonProps = ComponentProps<"button"> & {
   variant?: ButtonVariant;
@@ -17,6 +17,10 @@ function classes(variant: ButtonVariant): string {
 
   if (variant === "secondary") {
     return `${base} border border-foreground/15 bg-background text-foreground hover:bg-foreground/5`;
+  }
+
+  if (variant === "danger") {
+    return `${base} bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-300/40`;
   }
 
   return `${base} bg-foreground text-background hover:bg-foreground/90`;

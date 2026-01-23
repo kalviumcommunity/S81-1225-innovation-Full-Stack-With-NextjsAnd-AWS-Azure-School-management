@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "cross-env NEXT_DISABLE_TURBOPACK=1 next dev",
+    "dev": "cross-env NEXT_DISABLE_TURBOPACK=1 next dev --webpack",
     "build": "next build --webpack",
     "start": "next start",
     "db:migrate": "prisma migrate dev",
@@ -23,6 +23,7 @@
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@radix-ui/react-dialog": "^1.1.14",
     "@aws-sdk/client-s3": "^3.971.0",
     "@aws-sdk/s3-request-presigner": "^3.971.0",
     "@hookform/resolvers": "^5.2.2",
@@ -37,6 +38,7 @@
     "react-dom": "19.2.3",
     "react-hook-form": "^7.71.1",
     "redis": "^4.6.12",
+    "sonner": "^1.7.4",
     "swr": "^2.3.8",
     "zod": "^3.22.4"
   },
