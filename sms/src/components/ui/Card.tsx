@@ -6,7 +6,7 @@ export function Card({
 }: PropsWithChildren<{ className?: string }>) {
   return (
     <div
-      className={`rounded-xl border border-foreground/10 bg-background p-5 shadow-sm shadow-black/5 dark:shadow-black/20 ${className}`}
+      className={`rounded-xl border border-foreground/10 bg-(--surface) p-6 shadow-sm shadow-black/5 dark:border-foreground/15 dark:shadow-black/25 ${className}`}
     >
       {children}
     </div>
@@ -22,7 +22,9 @@ export function CardHeader({
 }) {
   return (
     <div className="mb-4">
-      <h2 className="text-base font-semibold text-foreground">{title}</h2>
+      <h2 className="text-base font-semibold tracking-tight text-foreground">
+        {title}
+      </h2>
       {description ? (
         <p className="mt-1 text-sm text-foreground/70">{description}</p>
       ) : null}

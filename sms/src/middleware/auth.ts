@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyToken, JwtPayload } from "@/lib/jwt";
-import { errorResponse, StatusCode } from "@/lib/api-response";
-import { prisma } from "@/lib/db";
+import {
+  errorResponse,
+  serviceUnavailableResponse,
+  StatusCode,
+} from "@/lib/api-response";
+import { isDbUnavailableError, prisma } from "@/lib/db";
 
 /**
  * Authenticate request and extract user from JWT token
@@ -48,7 +52,17 @@ export async function authenticateRequest(
     }
 
     return { user: payload, error: null };
-  } catch {
+  } catch (err) {
+    if (isDbUnavailableError(err)) {
+      return {
+        user: null,
+        error: serviceUnavailableResponse(
+          "Database temporarily unavailable. Please retry.",
+          3
+        ),
+      };
+    }
+
     return {
       user: null,
       error: errorResponse("Authentication failed", StatusCode.UNAUTHORIZED),

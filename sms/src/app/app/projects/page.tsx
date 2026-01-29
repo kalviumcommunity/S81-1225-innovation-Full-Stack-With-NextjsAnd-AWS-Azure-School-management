@@ -305,6 +305,10 @@ export default function ProjectsPage() {
             ? "Browse courses and register (projects are used as courses)."
             : "Create and manage courses (stored as projects)."
         }
+        breadcrumbs={[
+          { label: "Dashboard", href: "/app" },
+          { label: "Courses" },
+        ]}
       />
 
       {canCreate ? (
