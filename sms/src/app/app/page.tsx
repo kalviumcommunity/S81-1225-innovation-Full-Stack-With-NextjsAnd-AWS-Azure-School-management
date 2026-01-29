@@ -39,6 +39,34 @@ type Task = {
   } | null;
 };
 
+function accentForCourse(title: string): {
+  strip: string;
+  dot: string;
+} {
+  const accents = [
+    {
+      strip: "bg-linear-to-r from-brand/45 via-sky-400/25 to-emerald-400/25",
+      dot: "bg-brand",
+    },
+    {
+      strip: "bg-linear-to-r from-emerald-500/40 via-teal-400/25 to-sky-400/25",
+      dot: "bg-emerald-600",
+    },
+    {
+      strip: "bg-linear-to-r from-indigo-500/40 via-brand/25 to-amber-400/25",
+      dot: "bg-indigo-600",
+    },
+  ];
+
+  let hash = 0;
+  for (let i = 0; i < title.length; i += 1) {
+    hash = (hash * 31 + title.charCodeAt(i)) | 0;
+  }
+
+  const idx = Math.abs(hash) % accents.length;
+  return accents[idx];
+}
+
 export default function DashboardPage() {
   const { token, user } = useAuth();
   const searchParams = useSearchParams();
@@ -166,13 +194,15 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Home"
-        subtitle={`Welcome back, ${firstName}.`}
-        actions={
-          <StatusBadge variant="neutral">{user?.role || "—"}</StatusBadge>
-        }
-      />
+      <div className="rounded-2xl border border-foreground/10 bg-linear-to-r from-brand/10 via-(--surface) to-emerald-500/10 p-4 shadow-sm shadow-black/5 dark:border-foreground/15 dark:bg-linear-to-r dark:from-brand/15 dark:via-foreground/5 dark:to-emerald-500/10 sm:p-6">
+        <PageHeader
+          title="Home"
+          subtitle={`Welcome back, ${firstName}.`}
+          actions={
+            <StatusBadge variant="neutral">{user?.role || "—"}</StatusBadge>
+          }
+        />
+      </div>
 
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
@@ -184,7 +214,7 @@ export default function DashboardPage() {
             </h2>
             <Link
               href="/app/assignments"
-              className="text-sm text-foreground/70 hover:text-foreground hover:underline"
+              className="text-sm text-brand hover:text-brand-dark hover:underline"
             >
               View my assignments
             </Link>
@@ -222,11 +252,27 @@ export default function DashboardPage() {
           ) : (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               {studentCourses.map((c) => (
-                <Card key={c.id} className="flex flex-col">
+                <Card
+                  key={c.id}
+                  className="flex flex-col overflow-hidden shadow-md shadow-black/10 transition-shadow hover:shadow-lg hover:shadow-black/15"
+                >
+                  <div
+                    className={`-mx-6 -mt-6 mb-4 h-1.5 ${
+                      accentForCourse(c.title).strip
+                    }`}
+                  />
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <div className="truncate text-base font-semibold text-foreground">
-                        {c.title}
+                      <div className="flex items-center gap-2">
+                        <span
+                          aria-hidden="true"
+                          className={`h-2.5 w-2.5 shrink-0 rounded-full ${
+                            accentForCourse(c.title).dot
+                          }`}
+                        />
+                        <div className="truncate text-base font-semibold text-foreground">
+                          {c.title}
+                        </div>
                       </div>
                       {c.description ? (
                         <div className="mt-1 line-clamp-2 text-sm text-foreground/70">
@@ -246,9 +292,13 @@ export default function DashboardPage() {
                   </div>
 
                   <div className="mt-4 flex flex-wrap gap-2 text-xs text-foreground/70">
-                    <span>{c._count?.tasks ?? 0} assignments</span>
+                    <span className="text-brand-dark dark:text-brand-light">
+                      {c._count?.tasks ?? 0} assignments
+                    </span>
                     <span>•</span>
-                    <span>{c._count?.enrollments ?? 0} registered</span>
+                    <span className="text-emerald-700 dark:text-emerald-300">
+                      {c._count?.enrollments ?? 0} registered
+                    </span>
                   </div>
 
                   <div className="mt-4 flex items-center justify-between gap-2">
@@ -266,7 +316,7 @@ export default function DashboardPage() {
 
                     <Link
                       href="/app/projects"
-                      className="text-sm text-foreground/70 hover:text-foreground hover:underline"
+                      className="text-sm text-brand hover:text-brand-dark hover:underline"
                     >
                       Details
                     </Link>

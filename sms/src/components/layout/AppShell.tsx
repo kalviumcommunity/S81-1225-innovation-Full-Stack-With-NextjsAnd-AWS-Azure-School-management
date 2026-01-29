@@ -17,12 +17,19 @@ function NavLink({ href, label }: { href: string; label: string }) {
   return (
     <Link
       href={href}
-      className={`block w-full rounded-md px-3 py-2 text-sm font-medium leading-5 transition-colors ${
+      data-active={active ? "true" : "false"}
+      className={`relative block w-full rounded-md px-3 py-2 text-sm font-medium leading-5 transition-colors ${
         active
-          ? "bg-foreground/5 text-foreground"
-          : "text-foreground/70 hover:bg-foreground/5"
-      }`}
+          ? "bg-brand/10 text-brand-dark dark:bg-white/14 dark:text-slate-50"
+          : "text-slate-700 hover:bg-slate-200/70 hover:text-slate-900 dark:text-slate-200/90 dark:hover:bg-white/8 dark:hover:text-slate-50"
+      } sms-navlink`}
     >
+      {active ? (
+        <span
+          aria-hidden="true"
+          className="sms-navlink-indicator absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-brand dark:bg-emerald-400/90"
+        />
+      ) : null}
       <span className="block truncate">{label}</span>
     </Link>
   );
@@ -50,16 +57,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const initials = useMemo(() => initialsFromName(displayName), [displayName]);
 
   const navItems = useMemo(() => {
-    const base = [{ href: "/app", label: "Home" }];
+    const base = [{ href: "/app", label: "Dashboard" }];
 
     if (user?.role === "STUDENT") {
-      base.push({ href: "/app/assignments", label: "My Assignments" });
+      base.push(
+        { href: "/app/projects", label: "Courses" },
+        { href: "/app/assignments", label: "Assignments" }
+      );
     }
 
     if (user?.role === "TEACHER" || user?.role === "ADMIN") {
       base.push(
         { href: "/app/projects", label: "Courses" },
-        { href: "/app/tasks", label: "Assignments" }
+        { href: "/app/tasks", label: "Assignments" },
+        { href: "/app/submissions", label: "Submissions" }
       );
     }
 
@@ -72,7 +83,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-30 border-b border-foreground/10 bg-background/90 backdrop-blur">
+      <header className="sticky top-0 z-30 border-b border-foreground/10 bg-linear-to-r from-brand/10 via-background to-emerald-500/10 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <div className="flex items-center gap-3">
             <button
@@ -97,7 +108,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </svg>
             </button>
 
-            <Link href="/app" className="text-sm font-semibold text-foreground">
+            <Link
+              href="/app"
+              className="text-sm font-semibold tracking-tight text-foreground no-underline"
+              style={{ color: "var(--foreground)" }}
+            >
               SMS Dashboard
             </Link>
           </div>
@@ -159,12 +174,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             onClick={closeSidebar}
             aria-label="Close menu"
           />
-          <div className="relative h-full w-72 border-r border-foreground/10 bg-background p-4">
+          <div className="sms-sidebar relative h-full w-72 border-r border-foreground/10 bg-(--sidebar) p-4 text-foreground shadow-2xl shadow-black/10 dark:border-white/10 dark:bg-linear-to-b dark:from-slate-950 dark:to-slate-900 dark:text-slate-50 dark:shadow-black/40">
             <div className="flex items-center justify-between">
-              <div className="text-sm font-semibold text-foreground">Menu</div>
+              <div className="text-sm font-semibold text-foreground dark:text-slate-50">
+                Menu
+              </div>
               <button
                 type="button"
-                className="rounded-md border border-foreground/10 px-3 py-1.5 text-sm text-foreground/80 hover:text-foreground"
+                className="rounded-md border border-foreground/10 px-3 py-1.5 text-sm text-foreground/80 hover:text-foreground dark:border-white/10 dark:text-slate-200 dark:hover:text-slate-50"
                 onClick={closeSidebar}
               >
                 Close
@@ -187,17 +204,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-4 py-6 sm:px-6 sm:py-8 md:grid-cols-[220px_1fr]">
         <aside className="hidden md:block">
           <div className="sticky top-16 space-y-2">
-            <div className="rounded-lg border border-foreground/10 bg-background p-3">
-              <div className="text-sm font-medium text-foreground">
-                {displayName}
-              </div>
-              <div className="mt-1 flex items-center gap-2">
-                <StatusBadge variant="neutral">{user?.role || "—"}</StatusBadge>
-                <span className="text-xs text-foreground/60">Account</span>
+            <div className="sms-sidebar rounded-2xl border border-foreground/10 bg-(--sidebar) p-2 text-foreground shadow-sm shadow-black/5 dark:border-white/10 dark:bg-linear-to-b dark:from-slate-950 dark:to-slate-900 dark:text-slate-50 dark:shadow-black/10">
+              <div className="sms-sidebar-card rounded-xl border border-foreground/10 bg-(--sidebar-surface) p-3 dark:border-white/10 dark:bg-white/6">
+                <div className="text-sm font-medium text-slate-900 dark:text-slate-50">
+                  {displayName}
+                </div>
+                <div className="mt-1 flex items-center gap-2">
+                  <StatusBadge
+                    variant="neutral"
+                    className="sms-rolebadge border-slate-200 bg-slate-100 text-slate-700 dark:border-white/15 dark:bg-white/10 dark:text-slate-50"
+                  >
+                    {user?.role || "—"}
+                  </StatusBadge>
+                  <span className="text-xs text-slate-600 dark:text-slate-300/80">
+                    Account
+                  </span>
+                </div>
               </div>
             </div>
 
-            <nav className="space-y-1">
+            <nav className="sms-sidebar space-y-1 rounded-2xl border border-foreground/10 bg-(--sidebar) p-2 dark:border-white/10 dark:bg-linear-to-b dark:from-slate-950 dark:to-slate-900">
               {navItems.map((item) => (
                 <NavLink key={item.href} href={item.href} label={item.label} />
               ))}

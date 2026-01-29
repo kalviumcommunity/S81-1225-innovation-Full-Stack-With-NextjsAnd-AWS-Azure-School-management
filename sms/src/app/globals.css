@@ -1,14 +1,43 @@
 @import "tailwindcss";
 
 :root {
-    --background: #ffffff;
-    --foreground: #171717;
+    /* Core surfaces */
+    /* Soft, slightly tinted canvas (less "white everywhere") */
+    --background: #f5f7ff;
+    --foreground: #0f172a;
+
+    /* Neutrals */
+    --surface: #ffffff;
+    --surface-2: #f8fafc;
+    --border: rgba(15, 23, 42, 0.10);
+
+    /* Sidebar (light mode should be layered, not white) */
+    --sidebar: #F1F5F9;
+    --sidebar-surface: #ffffff;
+
+    /* Accents */
+    --primary: #2563eb;
+    --secondary: #059669;
+    --accent: #f59e0b;
+    --ring: rgba(37, 99, 235, 0.32);
 }
 
 html[data-theme="dark"],
 html.dark {
-    --background: #0b1020;
+    --background: #070b14;
     --foreground: #f4f6fb;
+
+    --surface: #0e172a;
+    --surface-2: #0b1220;
+    --border: rgba(244, 246, 251, 0.12);
+
+    --sidebar: #0b1220;
+    --sidebar-surface: #0e172a;
+
+    --primary: #60a5fa;
+    --secondary: #34d399;
+    --accent: #fbbf24;
+    --ring: rgba(96, 165, 250, 0.28);
 }
 
 @theme inline {
@@ -22,4 +51,111 @@ body {
     background: var(--background);
     color: var(--foreground);
     font-family: var(--font-sans);
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Never rely on browser default text/link colors */
+html,
+body,
+p,
+span,
+div,
+label,
+small,
+strong,
+em,
+li,
+dt,
+dd,
+th,
+td,
+caption,
+figcaption,
+legend {
+    color: var(--foreground);
+}
+
+a,
+a:visited {
+    color: var(--primary);
+    text-decoration-color: rgba(37, 99, 235, 0.35);
+}
+
+html[data-theme="dark"] a,
+html[data-theme="dark"] a:visited,
+html.dark a,
+html.dark a:visited {
+    color: var(--primary);
+    text-decoration-color: rgba(96, 165, 250, 0.35);
+}
+
+a:hover {
+    text-decoration-color: currentColor;
+}
+
+button,
+input,
+textarea,
+select {
+    color: var(--foreground);
+}
+
+input::placeholder,
+textarea::placeholder {
+    color: rgba(15, 23, 42, 0.50);
+}
+
+html[data-theme="dark"] input::placeholder,
+html[data-theme="dark"] textarea::placeholder,
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+    color: rgba(244, 246, 251, 0.55);
+}
+
+::selection {
+    background: rgba(37, 99, 235, 0.18);
+}
+
+*:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 4px var(--ring);
+    border-radius: 10px;
+}
+
+/* ---- Explicit theme overrides (sidebar) ---- */
+html[data-theme="light"] .sms-sidebar {
+    background: #F4F7FB !important;
+    border-color: #E5E7EB !important;
+}
+
+html[data-theme="light"] .sms-sidebar-card {
+    background: #FFFFFF !important;
+    border-color: #E5E7EB !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+html[data-theme="light"] .sms-navlink {
+    color: #374151 !important;
+}
+
+html[data-theme="light"] .sms-navlink:hover {
+    background: #EDF2F7 !important;
+    color: #111827 !important;
+}
+
+html[data-theme="light"] .sms-navlink[data-active="true"] {
+    background: #E8F0FF !important;
+    color: #2563EB !important;
+}
+
+html[data-theme="light"] .sms-navlink-indicator {
+    background: #2563EB !important;
+    width: 4px;
+}
+
+html[data-theme="light"] .sms-rolebadge {
+    background: #E0ECFF !important;
+    color: #2563EB !important;
+    border-color: rgba(37, 99, 235, 0.25) !important;
 }

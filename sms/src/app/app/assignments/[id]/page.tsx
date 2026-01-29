@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { use, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { apiFetch } from "@/utils/api-client";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -77,8 +77,9 @@ function formatName(
 export default function StudentAssignmentDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = use(params);
   const { token } = useAuth();
 
   const [task, setTask] = useState<TaskDetail | null>(null);
@@ -100,7 +101,7 @@ export default function StudentAssignmentDetailPage({
       setLoading(true);
       setError(null);
 
-      const res = await apiFetch<TaskDetail>(`/tasks/${params.id}`, { token });
+      const res = await apiFetch<TaskDetail>(`/tasks/${id}`, { token });
 
       if (!mounted) return;
 
@@ -118,7 +119,7 @@ export default function StudentAssignmentDetailPage({
     return () => {
       mounted = false;
     };
-  }, [token, params.id]);
+  }, [token, id]);
 
   useEffect(() => {
     let mounted = true;
@@ -128,7 +129,7 @@ export default function StudentAssignmentDetailPage({
       setSubmissionError(null);
 
       const res = await apiFetch<Submission[]>(
-        `/submissions?taskId=${encodeURIComponent(params.id)}`,
+        `/submissions?taskId=${encodeURIComponent(id)}`,
         { token }
       );
 
@@ -153,7 +154,7 @@ export default function StudentAssignmentDetailPage({
     return () => {
       mounted = false;
     };
-  }, [token, params.id]);
+  }, [token, id]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -168,7 +169,7 @@ export default function StudentAssignmentDetailPage({
       method: "POST",
       token,
       body: {
-        taskId: params.id,
+        taskId: id,
         content: content.trim(),
         fileUrl: fileUrl.trim() ? fileUrl.trim() : undefined,
       },

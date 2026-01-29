@@ -17,7 +17,7 @@ export function Spinner({
   return (
     <span
       aria-hidden="true"
-      className={`inline-block animate-spin rounded-full border-2 border-foreground/20 border-t-foreground ${sizeClasses(
+      className={`inline-block animate-spin rounded-full border-2 border-brand/25 border-t-brand ${sizeClasses(
         size
       )} ${className}`}
       {...props}

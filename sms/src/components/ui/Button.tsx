@@ -13,17 +13,17 @@ type LinkButtonProps = ComponentProps<typeof Link> & {
 
 function classes(variant: ButtonVariant): string {
   const base =
-    "inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/20 disabled:opacity-50 disabled:pointer-events-none";
+    "inline-flex h-10 items-center justify-center gap-2 rounded-md px-4 text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-50";
 
   if (variant === "secondary") {
     return `${base} border border-foreground/15 bg-background text-foreground hover:bg-foreground/5`;
   }
 
   if (variant === "danger") {
-    return `${base} bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-300/40`;
+    return `${base} bg-red-600 text-white hover:bg-red-700`;
   }
 
-  return `${base} bg-foreground text-background hover:bg-foreground/90`;
+  return `${base} bg-brand text-white shadow-sm shadow-black/5 hover:bg-brand/90 dark:shadow-black/20`;
 }
 
 export function Button({

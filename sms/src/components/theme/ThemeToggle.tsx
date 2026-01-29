@@ -10,9 +10,9 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
       type="button"
       onClick={toggleTheme}
       aria-label="Toggle theme"
-      className={`rounded-md border border-foreground/10 px-3 py-1.5 text-sm text-foreground/80 hover:text-foreground ${className}`}
+      className={`inline-flex h-10 items-center justify-center rounded-md border border-foreground/10 bg-background px-3 text-sm font-medium text-foreground/80 transition-colors hover:bg-foreground/5 hover:text-foreground ${className}`}
     >
-      {theme === "dark" ? "Light" : "Dark"}
+      {theme === "dark" ? "Light mode" : "Dark mode"}
     </button>
   );
 }

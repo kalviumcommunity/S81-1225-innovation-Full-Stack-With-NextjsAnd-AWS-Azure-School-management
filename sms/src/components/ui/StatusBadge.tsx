@@ -1,10 +1,14 @@
 type Variant = "neutral" | "success" | "warning" | "danger";
 
 const styles: Record<Variant, string> = {
-  neutral: "bg-foreground/5 text-foreground border-foreground/10",
-  success: "bg-emerald-500/10 text-emerald-700 border-emerald-500/20",
-  warning: "bg-amber-500/10 text-amber-700 border-amber-500/20",
-  danger: "bg-red-500/10 text-red-700 border-red-500/20",
+  neutral:
+    "bg-foreground/5 text-foreground border-foreground/10 dark:bg-white/10 dark:text-slate-50 dark:border-white/15",
+  success:
+    "bg-emerald-500/12 text-emerald-800 border-emerald-500/25 dark:bg-emerald-400/15 dark:text-emerald-100 dark:border-emerald-300/25",
+  warning:
+    "bg-amber-500/12 text-amber-900 border-amber-500/25 dark:bg-amber-400/15 dark:text-amber-100 dark:border-amber-300/25",
+  danger:
+    "bg-rose-500/12 text-rose-800 border-rose-500/25 dark:bg-rose-400/15 dark:text-rose-100 dark:border-rose-300/25",
 };
 
 export function StatusBadge({

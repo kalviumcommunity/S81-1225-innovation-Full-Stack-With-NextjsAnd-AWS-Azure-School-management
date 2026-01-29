@@ -96,3 +96,25 @@ export function forbiddenResponse(
 ): NextResponse<ApiResponse> {
   return errorResponse(message, StatusCode.FORBIDDEN);
 }
+
+/**
+ * Service unavailable response (useful for transient DB/network failures)
+ */
+export function serviceUnavailableResponse(
+  message: string = "Service temporarily unavailable",
+  retryAfterSeconds: number = 3
+): NextResponse<ApiResponse> {
+  return NextResponse.json(
+    {
+      success: false,
+      statusCode: StatusCode.SERVICE_UNAVAILABLE,
+      message,
+    },
+    {
+      status: StatusCode.SERVICE_UNAVAILABLE,
+      headers: {
+        "Retry-After": String(retryAfterSeconds),
+      },
+    }
+  );
+}

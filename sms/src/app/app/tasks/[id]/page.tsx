@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { use, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { apiFetch } from "@/utils/api-client";
@@ -74,8 +74,9 @@ function taskStatusVariant(status: string) {
 export default function TeacherTaskDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = use(params);
   const { token } = useAuth();
 
   const [task, setTask] = useState<TaskDetail | null>(null);
@@ -99,8 +100,8 @@ export default function TeacherTaskDetailPage({
     setError(null);
 
     const [tRes, sRes] = await Promise.all([
-      apiFetch<TaskDetail>(`/tasks/${params.id}`, { token }),
-      apiFetch<any[]>(`/submissions?taskId=${encodeURIComponent(params.id)}`, {
+      apiFetch<TaskDetail>(`/tasks/${id}`, { token }),
+      apiFetch<any[]>(`/submissions?taskId=${encodeURIComponent(id)}`, {
         token,
       }),
     ]);
@@ -134,7 +135,7 @@ export default function TeacherTaskDetailPage({
   useEffect(() => {
     loadAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, params.id]);
+  }, [token, id]);
 
   const dueLabel = useMemo(() => {
     if (!task?.dueDate) return "—";

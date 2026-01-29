@@ -205,6 +205,10 @@ export default function StudentAssignmentsPage() {
             ? `Filtered by: ${query}`
             : "Assignments from your registered courses"
         }
+        breadcrumbs={[
+          { label: "Dashboard", href: "/app" },
+          { label: "Assignments" },
+        ]}
         actions={<StatusBadge variant="neutral">{filtered.length}</StatusBadge>}
       />
 
