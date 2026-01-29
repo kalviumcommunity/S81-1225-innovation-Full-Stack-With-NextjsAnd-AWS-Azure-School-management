@@ -9,6 +9,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // User roles enum
@@ -55,9 +56,25 @@ model User {
   comments      Comment[]
   sessions      Session[]
   uploadedFiles UploadedFile[]
+  enrollments   ProjectEnrollment[]
 
   @@index([email])
   @@index([role])
+}
+
+// Student registrations for a course (Project)
+model ProjectEnrollment {
+  id        String   @id @default(cuid())
+  projectId String
+  userId    String
+  createdAt DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@index([projectId])
+  @@index([userId])
 }
 
 // Uploaded file metadata (pre-signed URL uploads)
@@ -94,6 +111,7 @@ model Project {
 
   // Relations
   tasks Task[]
+  enrollments ProjectEnrollment[]
 
   @@index([createdBy])
   @@index([status])

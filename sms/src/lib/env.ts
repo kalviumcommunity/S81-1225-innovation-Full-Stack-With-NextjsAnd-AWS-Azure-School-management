@@ -2,7 +2,7 @@ import { z } from "zod";
 
 const serverSchema = z.object({
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
-  REDIS_URL: z.string().min(1, "REDIS_URL is required"),
+  REDIS_URL: z.string().min(1).optional(),
   JWT_SECRET: z.string().min(1, "JWT_SECRET is required"),
 
   // Optional: SendGrid transactional email

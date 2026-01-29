@@ -20,6 +20,10 @@ const createUserSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   role: z.enum(["ADMIN", "TEACHER", "STUDENT", "PARENT"]).optional(),
+  password: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .optional(),
 });
 
 export async function GET(request: NextRequest) {
@@ -79,16 +83,19 @@ export async function POST(request: NextRequest) {
       return validationError(validation.errors);
     }
 
-    const { email, firstName, lastName, role } = validation.data;
+    const { email, firstName, lastName, role, password } = validation.data;
 
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
       return errorResponse("Email already registered", StatusCode.CONFLICT);
     }
 
-    // Admin-created accounts get a temporary password (must be reset via separate flow).
-    const tempPassword = crypto.randomBytes(18).toString("base64url");
-    const hashedPassword = await bcrypt.hash(tempPassword, 10);
+    const desiredRole = role ?? "STUDENT";
+
+    // Admin can either set an explicit password, or let the system generate a temporary one.
+    const generatedTempPassword = crypto.randomBytes(18).toString("base64url");
+    const plainPassword = password ?? generatedTempPassword;
+    const hashedPassword = await bcrypt.hash(plainPassword, 10);
 
     const created = await prisma.user.create({
       data: {
@@ -96,7 +103,7 @@ export async function POST(request: NextRequest) {
         password: hashedPassword,
         firstName,
         lastName,
-        role: role ?? "STUDENT",
+        role: desiredRole,
       },
       select: {
         id: true,
@@ -112,7 +119,10 @@ export async function POST(request: NextRequest) {
     await cacheDel(CACHE_KEYS.usersList);
 
     return successResponse(
-      created,
+      {
+        user: created,
+        tempPassword: password ? null : generatedTempPassword,
+      },
       "User created successfully",
       StatusCode.CREATED
     );

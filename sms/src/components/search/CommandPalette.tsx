@@ -84,6 +84,8 @@ export function CommandPalette(props: {
   const hint = useMemo(() => platformHint(), []);
 
   const canIndexUsers = role === "ADMIN";
+  const canIndexCourses = role === "TEACHER" || role === "ADMIN";
+  const canIndexAssignments = !!role; // authenticated users can search assignments they can access
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -141,8 +143,8 @@ export function CommandPalette(props: {
 
       const [usersRes, projectsRes, tasksRes] = await Promise.all([
         canIndexUsers ? apiFetch<UserRow[]>("/users", { token }) : null,
-        apiFetch<ProjectRow[]>("/projects", { token }),
-        apiFetch<TaskRow[]>("/tasks", { token }),
+        canIndexCourses ? apiFetch<ProjectRow[]>("/projects", { token }) : null,
+        canIndexAssignments ? apiFetch<TaskRow[]>("/tasks", { token }) : null,
       ]);
       if (!mounted) return;
 
@@ -166,34 +168,40 @@ export function CommandPalette(props: {
         }
       }
 
-      if (!projectsRes?.success) {
-        setIndexError(projectsRes?.message || "Failed to index courses");
-      } else {
-        for (const p of projectsRes.data || []) {
-          next.push({
-            id: `project:${p.id}`,
-            kind: "course",
-            title: p.title,
-            subtitle:
-              typeof p._count?.tasks === "number"
-                ? `${p._count.tasks} assignments`
-                : undefined,
-            href: `/app/projects?q=${encodeURIComponent(p.title)}`,
-          });
+      if (canIndexCourses) {
+        if (!projectsRes?.success) {
+          setIndexError(projectsRes?.message || "Failed to index courses");
+        } else {
+          for (const p of projectsRes.data || []) {
+            next.push({
+              id: `project:${p.id}`,
+              kind: "course",
+              title: p.title,
+              subtitle:
+                typeof p._count?.tasks === "number"
+                  ? `${p._count.tasks} assignments`
+                  : undefined,
+              href: `/app/projects?q=${encodeURIComponent(p.title)}`,
+            });
+          }
         }
       }
 
-      if (!tasksRes?.success) {
-        setIndexError(tasksRes?.message || "Failed to index assignments");
-      } else {
-        for (const t of tasksRes.data || []) {
-          next.push({
-            id: `task:${t.id}`,
-            kind: "assignment",
-            title: t.title,
-            subtitle: `${t.status} · Priority ${t.priority}`,
-            href: `/app/tasks?q=${encodeURIComponent(t.title)}`,
-          });
+      if (canIndexAssignments) {
+        if (!tasksRes?.success) {
+          setIndexError(tasksRes?.message || "Failed to index assignments");
+        } else {
+          const taskHrefBase =
+            role === "STUDENT" ? "/app/assignments" : "/app/tasks";
+          for (const t of tasksRes.data || []) {
+            next.push({
+              id: `task:${t.id}`,
+              kind: "assignment",
+              title: t.title,
+              subtitle: `${t.status} · Priority ${t.priority}`,
+              href: `${taskHrefBase}?q=${encodeURIComponent(t.title)}`,
+            });
+          }
         }
       }
 
@@ -224,7 +232,15 @@ export function CommandPalette(props: {
     return () => {
       mounted = false;
     };
-  }, [open, token, items.length, canIndexUsers]);
+  }, [
+    open,
+    token,
+    items.length,
+    canIndexUsers,
+    canIndexCourses,
+    canIndexAssignments,
+    role,
+  ]);
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();

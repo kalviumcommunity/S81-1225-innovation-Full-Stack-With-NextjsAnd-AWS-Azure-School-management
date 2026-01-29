@@ -46,7 +46,31 @@ export async function apiFetch<T>(
     signal,
   });
 
-  const data = (await res.json()) as ApiResponse<T>;
+  let rawText = "";
+  try {
+    rawText = await res.text();
+  } catch {
+    rawText = "";
+  }
+
+  if (!rawText) {
+    return {
+      success: false,
+      statusCode: res.status as any,
+      message: "Empty response from server",
+    } as ApiResponse<T>;
+  }
+
+  let data: ApiResponse<T> | null = null;
+  try {
+    data = JSON.parse(rawText) as ApiResponse<T>;
+  } catch {
+    return {
+      success: false,
+      statusCode: res.status as any,
+      message: "Unexpected response from server",
+    } as ApiResponse<T>;
+  }
 
   // Normalize unexpected non-JSON errors
   if (

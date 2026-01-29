@@ -32,6 +32,22 @@ export async function GET(
     const task = await prisma.task.findUnique({
       where: { id },
       include: {
+        project: {
+          select: {
+            id: true,
+            title: true,
+            createdBy: true,
+          },
+        },
+        creator: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            role: true,
+          },
+        },
         assignee: {
           select: {
             id: true,
@@ -56,6 +72,42 @@ export async function GET(
 
     if (!task) {
       return notFoundResponse("Task not found");
+    }
+
+    // Authorization:
+    // - Students can view tasks for courses they are registered in and created by staff.
+    //   Includes course-wide tasks (assignedTo = null) and tasks assigned to them.
+    // - Teachers can view tasks for courses they created.
+    // - Admins can view all tasks.
+    if (user.role === "STUDENT") {
+      const createdByStaff =
+        task.creator?.role === "TEACHER" || task.creator?.role === "ADMIN";
+
+      if (!createdByStaff) return forbiddenResponse();
+
+      // If the task is assigned to someone else, students cannot view it.
+      if (task.assignedTo && task.assignedTo !== user.userId) {
+        return forbiddenResponse();
+      }
+
+      // Student must be registered in the task's course.
+      const enrollment = await prisma.projectEnrollment.findUnique({
+        where: {
+          projectId_userId: {
+            projectId: task.projectId,
+            userId: user.userId,
+          },
+        },
+        select: { id: true },
+      });
+
+      if (!enrollment) return forbiddenResponse();
+    } else if (user.role === "TEACHER") {
+      if (task.project?.createdBy !== user.userId) {
+        return forbiddenResponse();
+      }
+    } else if (user.role !== "ADMIN") {
+      return forbiddenResponse();
     }
 
     return successResponse(task, "Task fetched successfully");
@@ -162,11 +214,8 @@ export async function DELETE(
       return notFoundResponse("Task not found");
     }
 
-    if (
-      task.createdBy !== user.userId &&
-      task.assignedTo !== user.userId &&
-      user.role !== "ADMIN"
-    ) {
+    // Only the creator (teacher/admin) or an admin can delete an assignment.
+    if (task.createdBy !== user.userId && user.role !== "ADMIN") {
       return forbiddenResponse();
     }
 

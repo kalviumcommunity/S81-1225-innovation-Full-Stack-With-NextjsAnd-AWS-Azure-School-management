@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { apiFetch } from "@/utils/api-client";
@@ -33,7 +34,7 @@ function toIsoDateTimeLocal(value: string): string {
 }
 
 export default function TasksPage() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const searchParams = useSearchParams();
 
   const [projects, setProjects] = useState<Project[]>([]);
@@ -45,12 +46,28 @@ export default function TasksPage() {
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState(1);
   const [projectId, setProjectId] = useState("");
+  const [assignedTo, setAssignedTo] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
+
+  const canManage = user?.role === "TEACHER" || user?.role === "ADMIN";
+
+  type EnrolledStudent = {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    isActive: boolean;
+    enrolledAt: string;
+  };
+
+  const [enrolledStudents, setEnrolledStudents] = useState<EnrolledStudent[]>(
+    []
+  );
 
   useEffect(() => {
     const q = searchParams.get("q");
@@ -62,9 +79,32 @@ export default function TasksPage() {
 
   const canCreate = useMemo(() => !!title && !!projectId, [title, projectId]);
 
-  async function loadAll() {
-    if (!token) return;
+  useEffect(() => {
+    setAssignedTo("");
+    setEnrolledStudents([]);
 
+    async function loadEnrolled() {
+      if (!canManage) return;
+      if (!token) return;
+      if (!projectId) return;
+
+      const res = await apiFetch<EnrolledStudent[]>(
+        `/projects/${projectId}/students`,
+        { token }
+      );
+
+      if (!res.success) {
+        setEnrolledStudents([]);
+        return;
+      }
+
+      setEnrolledStudents(res.data || []);
+    }
+
+    loadEnrolled();
+  }, [projectId, token, canManage]);
+
+  async function loadAll() {
     setLoading(true);
     setError(null);
 
@@ -97,7 +137,11 @@ export default function TasksPage() {
 
   async function onCreate(e: React.FormEvent) {
     e.preventDefault();
-    if (!token || !canCreate) return;
+    if (!canCreate) return;
+    if (!canManage) {
+      toast.error("You do not have permission to create assignments");
+      return;
+    }
 
     const toastId = toast.loading("Creating assignment…");
     setSubmitting(true);
@@ -109,6 +153,7 @@ export default function TasksPage() {
       priority,
       projectId,
       dueDate: dueDate ? toIsoDateTimeLocal(dueDate) : undefined,
+      assignedTo: assignedTo || undefined,
     };
 
     const res = await apiFetch<Task>("/tasks", { method: "POST", token, body });
@@ -133,8 +178,6 @@ export default function TasksPage() {
   }
 
   async function onDeleteTask(taskId: string) {
-    if (!token) return;
-
     const toastId = toast.loading("Deleting assignment…");
     setDeleting(true);
     setError(null);
@@ -174,7 +217,12 @@ export default function TasksPage() {
         key: "title",
         header: "Assignment",
         cell: (t) => (
-          <span className="font-medium text-foreground">{t.title}</span>
+          <Link
+            href={`/app/tasks/${t.id}`}
+            className="font-medium text-foreground hover:underline"
+          >
+            {t.title}
+          </Link>
         ),
       },
       {
@@ -201,31 +249,35 @@ export default function TasksPage() {
         widthClassName: "w-[120px]",
         cell: (t) => <span className="text-foreground/70">{t.priority}</span>,
       },
-      {
-        key: "actions",
-        header: "",
-        widthClassName: "w-[140px]",
-        cell: (t) => (
-          <ConfirmDialog
-            open={deletingId === t.id}
-            onOpenChange={(open) => setDeletingId(open ? t.id : null)}
-            title="Delete assignment?"
-            description="This action cannot be undone."
-            confirmLabel={
-              deletingId === t.id && deleting ? "Deleting…" : "Delete"
-            }
-            confirmVariant="danger"
-            confirmDisabled={deleting}
-            onConfirm={() => onDeleteTask(t.id)}
-          >
-            <Button variant="secondary" type="button" className="px-3">
-              Delete
-            </Button>
-          </ConfirmDialog>
-        ),
-      },
+      ...(canManage
+        ? ([
+            {
+              key: "actions",
+              header: "",
+              widthClassName: "w-[140px]",
+              cell: (t) => (
+                <ConfirmDialog
+                  open={deletingId === t.id}
+                  onOpenChange={(open) => setDeletingId(open ? t.id : null)}
+                  title="Delete assignment?"
+                  description="This action cannot be undone."
+                  confirmLabel={
+                    deletingId === t.id && deleting ? "Deleting…" : "Delete"
+                  }
+                  confirmVariant="danger"
+                  confirmDisabled={deleting}
+                  onConfirm={() => onDeleteTask(t.id)}
+                >
+                  <Button variant="secondary" type="button" className="px-3">
+                    Delete
+                  </Button>
+                </ConfirmDialog>
+              ),
+            },
+          ] as Column<Task>[])
+        : []),
     ],
-    [deletingId, deleting, token]
+    [deletingId, deleting, token, canManage]
   );
 
   return (
@@ -235,101 +287,129 @@ export default function TasksPage() {
         subtitle="Create and track assignments across courses (stored as tasks)."
       />
 
-      <Card>
-        <CardHeader title="Create task" />
-        <form
-          className="grid grid-cols-1 gap-4 md:grid-cols-2"
-          onSubmit={onCreate}
-        >
-          {submitting ? (
-            <p role="status" aria-live="polite" className="sr-only">
-              Creating assignment…
-            </p>
-          ) : null}
-
-          <div className="space-y-2 md:col-span-1">
-            <label className="text-sm font-medium text-foreground">Title</label>
-            <Input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              required
-            />
-          </div>
-
-          <div className="space-y-2 md:col-span-1">
-            <label className="text-sm font-medium text-foreground">
-              Project
-            </label>
-            <select
-              className="h-10 w-full rounded-md border border-foreground/15 bg-background px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/20"
-              value={projectId}
-              onChange={(e) => setProjectId(e.target.value)}
-              required
-            >
-              <option value="">Select a project…</option>
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.title}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="space-y-2 md:col-span-2">
-            <label className="text-sm font-medium text-foreground">
-              Description (optional)
-            </label>
-            <Textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
-          </div>
-
-          <div className="space-y-2 md:col-span-1">
-            <label className="text-sm font-medium text-foreground">
-              Priority (1–5)
-            </label>
-            <Input
-              type="number"
-              min={1}
-              max={5}
-              value={priority}
-              onChange={(e) => setPriority(Number(e.target.value))}
-            />
-          </div>
-
-          <div className="space-y-2 md:col-span-1">
-            <label className="text-sm font-medium text-foreground">
-              Due date (optional)
-            </label>
-            <Input
-              type="datetime-local"
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
-            />
-          </div>
-
-          <div className="md:col-span-2">
-            {error ? (
-              <p className="mb-2 text-sm text-red-600">{error}</p>
+      {canManage ? (
+        <Card>
+          <CardHeader title="Create task" />
+          <form
+            className="grid grid-cols-1 gap-4 md:grid-cols-2"
+            onSubmit={onCreate}
+          >
+            {submitting ? (
+              <p role="status" aria-live="polite" className="sr-only">
+                Creating assignment…
+              </p>
             ) : null}
-            <Button
-              type="submit"
-              disabled={submitting || !canCreate}
-              aria-busy={submitting}
-            >
-              {submitting ? (
-                <span className="inline-flex items-center gap-2">
-                  <Spinner size="sm" />
-                  Creating…
-                </span>
-              ) : (
-                "Create task"
-              )}
-            </Button>
-          </div>
-        </form>
-      </Card>
+
+            <div className="space-y-2 md:col-span-1">
+              <label className="text-sm font-medium text-foreground">
+                Title
+              </label>
+              <Input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="space-y-2 md:col-span-1">
+              <label className="text-sm font-medium text-foreground">
+                Project
+              </label>
+              <select
+                className="h-10 w-full rounded-md border border-foreground/15 bg-background px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/20"
+                value={projectId}
+                onChange={(e) => setProjectId(e.target.value)}
+                required
+              >
+                <option value="">Select a project…</option>
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-2 md:col-span-1">
+              <label className="text-sm font-medium text-foreground">
+                Assign to student
+              </label>
+              <select
+                className="h-10 w-full rounded-md border border-foreground/15 bg-background px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/20"
+                value={assignedTo}
+                onChange={(e) => setAssignedTo(e.target.value)}
+                disabled={!projectId}
+              >
+                <option value="">Unassigned (optional)</option>
+                {enrolledStudents.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {(s.firstName || "") + " " + (s.lastName || "")} ({s.email})
+                  </option>
+                ))}
+              </select>
+              {projectId && enrolledStudents.length === 0 ? (
+                <p className="text-xs text-foreground/60">
+                  No registered students in this course yet.
+                </p>
+              ) : null}
+            </div>
+
+            <div className="space-y-2 md:col-span-2">
+              <label className="text-sm font-medium text-foreground">
+                Description (optional)
+              </label>
+              <Textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2 md:col-span-1">
+              <label className="text-sm font-medium text-foreground">
+                Priority (1–5)
+              </label>
+              <Input
+                type="number"
+                min={1}
+                max={5}
+                value={priority}
+                onChange={(e) => setPriority(Number(e.target.value))}
+              />
+            </div>
+
+            <div className="space-y-2 md:col-span-1">
+              <label className="text-sm font-medium text-foreground">
+                Due date (optional)
+              </label>
+              <Input
+                type="datetime-local"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              {error ? (
+                <p className="mb-2 text-sm text-red-600">{error}</p>
+              ) : null}
+              <Button
+                type="submit"
+                disabled={submitting || !canCreate}
+                aria-busy={submitting}
+              >
+                {submitting ? (
+                  <span className="inline-flex items-center gap-2">
+                    <Spinner size="sm" />
+                    Creating…
+                  </span>
+                ) : (
+                  "Create task"
+                )}
+              </Button>
+            </div>
+          </form>
+        </Card>
+      ) : null}
 
       <Card>
         <CardHeader

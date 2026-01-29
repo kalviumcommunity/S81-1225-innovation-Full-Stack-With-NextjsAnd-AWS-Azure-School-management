@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import * as Dialog from "@radix-ui/react-dialog";
+import { toast } from "sonner";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { apiFetch } from "@/utils/api-client";
 import { Card, CardHeader } from "@/components/ui/Card";
@@ -9,6 +11,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Input } from "@/components/ui/Input";
 import { DataTable, type Column } from "@/components/ui/DataTable";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { Button } from "@/components/ui/Button";
 
 type UserRow = {
   id: string;
@@ -18,6 +21,11 @@ type UserRow = {
   role: string;
   isActive: boolean;
   createdAt: string;
+};
+
+type CreateUserResult = {
+  user: UserRow;
+  tempPassword: string | null;
 };
 
 export default function UsersPage() {
@@ -34,6 +42,16 @@ export default function UsersPage() {
   const [page, setPage] = useState(1);
   const pageSize = 10;
 
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createEmail, setCreateEmail] = useState("");
+  const [createFirstName, setCreateFirstName] = useState("");
+  const [createLastName, setCreateLastName] = useState("");
+  const [createPassword, setCreatePassword] = useState("");
+  const [createSubmitting, setCreateSubmitting] = useState(false);
+  const [createResult, setCreateResult] = useState<CreateUserResult | null>(
+    null
+  );
+
   useEffect(() => {
     const q = searchParams.get("q");
     if (q && q !== query) {
@@ -46,8 +64,6 @@ export default function UsersPage() {
     let mounted = true;
 
     async function load() {
-      if (!token) return;
-
       setLoading(true);
       setError(null);
 
@@ -70,6 +86,51 @@ export default function UsersPage() {
       mounted = false;
     };
   }, [token]);
+
+  async function createTeacher() {
+    if (!token) {
+      toast.error("Not authenticated");
+      return;
+    }
+
+    setCreateSubmitting(true);
+    setCreateResult(null);
+
+    const toastId = toast.loading("Creating teacher…");
+
+    const res = await apiFetch<CreateUserResult>("/users", {
+      token,
+      method: "POST",
+      body: {
+        email: createEmail.trim(),
+        firstName: createFirstName.trim(),
+        lastName: createLastName.trim(),
+        role: "TEACHER",
+        password: createPassword.trim() ? createPassword : undefined,
+      },
+    });
+
+    if (!res.success || !res.data) {
+      toast.error(res.message || "Failed to create teacher", { id: toastId });
+      setCreateSubmitting(false);
+      return;
+    }
+
+    const created = res.data;
+    setCreateResult(created);
+    setUsers((prev) => [created.user, ...prev]);
+    toast.success("Teacher created", { id: toastId });
+    setCreateSubmitting(false);
+  }
+
+  async function copyToClipboard(value: string) {
+    try {
+      await navigator.clipboard.writeText(value);
+      toast.success("Copied to clipboard");
+    } catch {
+      toast.error("Copy failed");
+    }
+  }
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -149,10 +210,141 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Student & Staff Directory"
-        subtitle="Admin-only directory (cached via Redis)."
-      />
+      <div className="flex items-start justify-between gap-4">
+        <PageHeader
+          title="Student & Staff Directory"
+          subtitle="Admin-only directory (cached via Redis)."
+        />
+
+        <Dialog.Root
+          open={createOpen}
+          onOpenChange={(open) => {
+            setCreateOpen(open);
+            if (open) {
+              setCreateResult(null);
+            }
+          }}
+        >
+          <Dialog.Trigger asChild>
+            <Button type="button">Add teacher</Button>
+          </Dialog.Trigger>
+
+          <Dialog.Portal>
+            <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40" />
+
+            <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[92vw] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-lg border border-foreground/15 bg-background p-5 shadow-lg focus:outline-none">
+              <Dialog.Title className="text-base font-semibold">
+                Add teacher
+              </Dialog.Title>
+              <Dialog.Description className="mt-2 text-sm text-foreground/70">
+                Create a teacher account. You can set a password, or leave it
+                blank to generate a temporary one.
+              </Dialog.Description>
+
+              <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div className="md:col-span-2">
+                  <Input
+                    value={createEmail}
+                    onChange={(e) => setCreateEmail(e.target.value)}
+                    placeholder="teacher@email.com"
+                    type="email"
+                    autoComplete="email"
+                  />
+                </div>
+
+                <Input
+                  value={createFirstName}
+                  onChange={(e) => setCreateFirstName(e.target.value)}
+                  placeholder="First name"
+                  autoComplete="given-name"
+                />
+
+                <Input
+                  value={createLastName}
+                  onChange={(e) => setCreateLastName(e.target.value)}
+                  placeholder="Last name"
+                  autoComplete="family-name"
+                />
+
+                <div className="md:col-span-2">
+                  <Input
+                    value={createPassword}
+                    onChange={(e) => setCreatePassword(e.target.value)}
+                    placeholder="Password (optional, min 8 chars)"
+                    type="password"
+                    autoComplete="new-password"
+                  />
+                </div>
+              </div>
+
+              {createResult ? (
+                <div className="mt-4 rounded-md border border-foreground/10 bg-foreground/5 p-3 text-sm">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <div className="font-medium text-foreground">
+                        Created: {createResult.user.email}
+                      </div>
+                      <div className="text-foreground/70">
+                        Role: {createResult.user.role}
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() =>
+                        void copyToClipboard(createResult.user.email)
+                      }
+                    >
+                      Copy email
+                    </Button>
+                  </div>
+
+                  {createResult.tempPassword ? (
+                    <div className="mt-3 flex items-center justify-between gap-2">
+                      <div>
+                        <div className="font-medium text-foreground">
+                          Temporary password
+                        </div>
+                        <div className="font-mono text-foreground/80">
+                          {createResult.tempPassword}
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() =>
+                          void copyToClipboard(createResult.tempPassword || "")
+                        }
+                      >
+                        Copy password
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="mt-3 text-foreground/70">
+                      Password was set by admin (not shown).
+                    </div>
+                  )}
+                </div>
+              ) : null}
+
+              <div className="mt-5 flex items-center justify-end gap-2">
+                <Dialog.Close asChild>
+                  <Button type="button" variant="secondary">
+                    Close
+                  </Button>
+                </Dialog.Close>
+                <Button
+                  type="button"
+                  disabled={createSubmitting}
+                  onClick={() => void createTeacher()}
+                >
+                  Create teacher
+                </Button>
+              </div>
+            </Dialog.Content>
+          </Dialog.Portal>
+        </Dialog.Root>
+      </div>
 
       <Card>
         <CardHeader

@@ -8,7 +8,7 @@ import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 export function TopNav() {
   const pathname = usePathname();
-  const { user, logout } = useAuth();
+  const { user, isAuthenticated, logout } = useAuth();
 
   // Avoid duplicating navigation inside the existing /app dashboard shell.
   if (pathname?.startsWith("/app")) return null;
@@ -20,24 +20,21 @@ export function TopNav() {
           <Link className="font-medium text-foreground" href="/">
             Home
           </Link>
-          <Link
-            className="text-foreground/80 hover:text-foreground"
-            href="/login"
-          >
-            Login
-          </Link>
-          <Link
-            className="text-foreground/80 hover:text-foreground"
-            href="/dashboard"
-          >
-            Dashboard
-          </Link>
-          <Link
-            className="text-foreground/80 hover:text-foreground"
-            href="/users"
-          >
-            Users
-          </Link>
+          {isAuthenticated ? (
+            <Link
+              className="text-foreground/80 hover:text-foreground"
+              href="/app"
+            >
+              Dashboard
+            </Link>
+          ) : (
+            <Link
+              className="text-foreground/80 hover:text-foreground"
+              href="/login"
+            >
+              Login
+            </Link>
+          )}
         </nav>
 
         <div className="flex flex-wrap items-center justify-end gap-3 text-sm">
